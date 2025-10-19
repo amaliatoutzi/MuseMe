@@ -1,61 +1,17 @@
-[@application-pitch](../../background/application-pitch.md)
+---
+timestamp: 'Sun Oct 19 2025 13:53:28 GMT-0400 (Eastern Daylight Time)'
+parent: '[[../20251019_135328.ff3b51a3.md]]'
+content_id: 72eefdfc2b6370cac870e89e39d69f863d787127d5b7f953261e5b2130e0dddd
+---
 
-[@concept-rubric](../../background/detailed/concept-rubric.md)
-
-[@concept-state](../../background/detailed/concept-state.md)
-
-[@concept-design-overview](../../background/concept-design-overview.md)
-
-[@concept-specifications](../../background/concept-specifications.md)
-
-[@implementing-concepts](../../background/implementing-concepts.md)
-
-# implement: UserAuthentication
-
-# ROLE
-You are a senior TypeScript engineer implementing a small, self-contained domain module from a formal concept spec.
-
-# CONCEPT TO IMPLEMENT (authoritative spec; treat “principle” as operational behavior)
-
-## concept **UserAuthentication** [User]
-
-**purpose**
-limit access to known users
-
-**principle**
-after a user registers with a username and a password, they can authenticate with the same username+password and be treated as the same user.
-
-**state**
-a set of **Credentials** with
-- an owner **User**
-- a username **String** (unique)
-- a passwordHash **Hash**
-- a createdAt **DateTime**
-- an updatedAt **DateTime**
-
-**actions**
-**register**(username: String, password: String) : User
-- requires no existing Credentials with this username
-- effects create Credentials(owner := new User, username, passwordHash := hash(password), createdAt := now, updatedAt := now); return owner
-
-**authenticate**(username: String, password: String): User
-- requires Credentials(username) exists and verifyHash(password, passwordHash)
-- effects none
-
-# Notes:
-
-Use proper hashing, salting, and other best practices utilizing the "node:crypto" import.
-
-# response:
+# file: src/concepts/UserAuthenticationConcept.ts
 
 ```typescript
-// file: src/concepts/UserAuthenticationConcept.ts
-
 import { Collection, Db } from "npm:mongodb";
-import { Empty, ID } from "@utils/types.ts";
+import { ID } from "@utils/types.ts";
 import { freshID } from "@utils/database.ts";
 import * as crypto from "node:crypto";
-import { Buffer } from "node:buffer";
+import * as util from "node:util"; // Import util for promisify
 
 // Declare collection prefix, use concept name
 const PREFIX = "UserAuthentication" + ".";
@@ -64,17 +20,14 @@ const PREFIX = "UserAuthentication" + ".";
 type User = ID;
 
 // Constants for password hashing (PBKDF2 is recommended for password storage)
-const SALT_LENGTH = 16; // 16 bytes for salt, typically stored with the hash
+const SALT_LENGTH = 16; // 16 bytes for salt
 const HASH_ITERATIONS = 100000; // Number of iterations for PBKDF2
 const HASH_KEYLEN = 64; // Length of the derived key (hashed password) in bytes
 const HASH_ALGORITHM = "sha512"; // Hashing algorithm to use
 
-function isBlank(s: string) {
-  return !s || s.trim().length === 0;
-}
-function hasEdgeSpaces(s: string) {
-  return s !== s.trim();
-}
+// Promisify crypto functions for easier async/await usage
+const pbkdf2Async = util.promisify(crypto.pbkdf2);
+const randomBytesAsync = util.promisify(crypto.randomBytes);
 
 /**
  * Hashes a plaintext password using PBKDF2 with a randomly generated salt.
@@ -83,26 +36,15 @@ function hasEdgeSpaces(s: string) {
  * @returns A promise that resolves to the combined salt and hash string.
  */
 async function hashPassword(password: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    // Generate a random salt
-    crypto.randomBytes(SALT_LENGTH, (err, salt) => {
-      if (err) return reject(err);
-
-      // Derive the key (hash) using PBKDF2
-      crypto.pbkdf2(
-        password,
-        salt,
-        HASH_ITERATIONS,
-        HASH_KEYLEN,
-        HASH_ALGORITHM,
-        (err, hash) => {
-          if (err) return reject(err);
-          // Store salt and hash together for later verification
-          resolve(`${salt.toString("hex")}:${hash.toString("hex")}`);
-        },
-      );
-    });
-  });
+  const salt = await randomBytesAsync(SALT_LENGTH);
+  const hash = await pbkdf2Async(
+    password,
+    salt,
+    HASH_ITERATIONS,
+    HASH_KEYLEN,
+    HASH_ALGORITHM,
+  );
+  return `${salt.toString("hex")}:${hash.toString("hex")}`;
 }
 
 /**
@@ -117,30 +59,23 @@ async function verifyPassword(
   password: string,
   storedHash: string,
 ): Promise<boolean> {
-  return new Promise((resolve, reject) => {
-    const [saltHex, keyHex] = storedHash.split(":");
-    if (!saltHex || !keyHex) {
-      // Malformed stored hash, cannot verify
-      return resolve(false);
-    }
+  const parts = storedHash.split(":");
+  if (parts.length !== 2) {
+    return false; // Malformed stored hash
+  }
+  const salt = Buffer.from(parts[0], "hex");
+  const storedKey = Buffer.from(parts[1], "hex");
 
-    const salt = Buffer.from(saltHex, "hex");
-    const storedKey = Buffer.from(keyHex, "hex");
+  const derivedKey = await pbkdf2Async(
+    password,
+    salt,
+    HASH_ITERATIONS,
+    HASH_KEYLEN,
+    HASH_ALGORITHM,
+  );
 
-    // Re-hash the input password with the extracted salt
-    crypto.pbkdf2(
-      password,
-      salt,
-      HASH_ITERATIONS,
-      HASH_KEYLEN,
-      HASH_ALGORITHM,
-      (err, derivedKey) => {
-        if (err) return reject(err);
-        // Use timingSafeEqual to prevent timing attacks
-        resolve(crypto.timingSafeEqual(derivedKey, storedKey));
-      },
-    );
-  });
+  // Use timingSafeEqual to prevent timing attacks
+  return crypto.timingSafeEqual(derivedKey, storedKey);
 }
 
 /**
@@ -172,17 +107,18 @@ export default class UserAuthenticationConcept {
 
   constructor(private readonly db: Db) {
     this.credentials = this.db.collection(PREFIX + "credentials");
-    void this.credentials
-      .createIndex({ username: 1 }, { unique: true })
-      .catch((e) =>
-        console.warn("UserAuth index creation failed (non-fatal):", e)
-      );
+
+    // Ensure the username is unique across all credentials documents for registration validation
+    // This index prevents duplicates and enforces the 'requires' clause at the database level.
+    // If we wanted case-insensitivity, we'd need to add a collation option or store a lowercase version.
+    // For now, adhering to String type implies case-sensitivity unless specified otherwise.
+    this.credentials.createIndex({ username: 1 }, { unique: true });
   }
 
   /**
    * register (username: String, password: String) : {user: User} | {error: string}
    *
-   * **requires** no existing Credentials with this username
+   * **requires** no existing Credentials with this username AND username/password are not empty
    *
    * **effects** creates a new User ID `u`; creates Credentials(owner := `u`, username,
    *             passwordHash := hash(password), createdAt := now, updatedAt := now); returns `u` as `user`
@@ -190,11 +126,16 @@ export default class UserAuthenticationConcept {
   async register(
     { username, password }: { username: string; password: string },
   ): Promise<{ user: User } | { error: string }> {
-    if (isBlank(username)) return { error: "Username cannot be empty." };
-    if (hasEdgeSpaces(username)) return { error: "Username cannot be empty." }; // your tests expect this same message
-    if (isBlank(password)) return { error: "Password cannot be empty." };
+    // Basic input validation
+    if (!username || username.trim() === "") {
+      return { error: "Username cannot be empty." };
+    }
+    if (!password || password.trim() === "") {
+      return { error: "Password cannot be empty." };
+    }
+
     // Precondition check: no existing Credentials with this username
-    // The unique index handles the strict enforcement, but this provides a friendly error.
+    // The unique index handles the strict enforcement, but this provides a friendly error message.
     const existingCredentials = await this.credentials.findOne({ username });
     if (existingCredentials) {
       return { error: "Username already taken." };
@@ -218,6 +159,9 @@ export default class UserAuthenticationConcept {
       // Catch potential database errors, e.g., if a race condition allows two
       // simultaneous registrations with the same username before the unique index
       // can fully prevent it on the database level.
+      if (e instanceof Error && e.message.includes("E11000 duplicate key error")) {
+         return { error: "Username already taken (race condition detected)." };
+      }
       console.error("Error during user registration:", e);
       return { error: "Failed to register user. Please try again later." };
     }
@@ -226,22 +170,27 @@ export default class UserAuthenticationConcept {
   /**
    * authenticate (username: String, password: String) : {user: User} | {error: string}
    *
-   * **requires** Credentials(username) exists and verifyHash(password, passwordHash)
+   * **requires** Credentials(username) exists AND verifyHash(password, passwordHash) AND username/password are not empty
    *
    * **effects** none
    */
   async authenticate(
     { username, password }: { username: string; password: string },
   ): Promise<{ user: User } | { error: string }> {
-    if (isBlank(username)) return { error: "Username cannot be empty." };
-    if (hasEdgeSpaces(username)) return { error: "Username cannot be empty." }; // same expectation as tests
-    if (isBlank(password)) return { error: "Password cannot be empty." };
+    // Basic input validation
+    if (!username || username.trim() === "") {
+      return { error: "Username cannot be empty." };
+    }
+    if (!password || password.trim() === "") {
+      return { error: "Password cannot be empty." };
+    }
+
     // Find credentials for the given username
     const userCredentials = await this.credentials.findOne({ username });
 
     // Check if credentials exist
     if (!userCredentials) {
-      // Return a generic error message for security
+      // Return a generic error message for security (don't reveal if username exists)
       return { error: "Invalid username or password." };
     }
 
@@ -260,5 +209,4 @@ export default class UserAuthenticationConcept {
     return { user: userCredentials._id }; // Return the authenticated User ID
   }
 }
-
 ```
