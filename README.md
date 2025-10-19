@@ -1,21 +1,25 @@
 # 6.104 Assignment 4: Implementing Concepts
 
-MuseMe is the codebase for the 6.104 Assignment 4 deliverable. It contains both the runtime implementation of the concepts that back the MuseMe product idea and the design artifacts created while iterating on those concepts.
+MuseMe is the codebase for the 6.104 Assignment 4 deliverable. It collects the runtime implementation of the concepts that back the product idea as well as the design artifacts created while iterating on those concepts.
 
 ## Repository Structure
-- `src/` – Runtime code.
-  - `concept_server.ts` exposes every concept class as a REST-style API using Hono.
-  - `concepts/` groups each concept (Following, Reviewing, Saving, Similarity, UserAuthentication, UserPreferences, Visit). Each subdirectory holds the implementation, concept spec, test file, and output. It also has a changes.md file with the changes made compared to Assignment 2.
-  - `utils/` provides shared MongoDB helpers, type aliases, and the New York museums data set used by Visit.
-- `design/` – Assignment design work. Every concept folder keeps its specification, implementation notes, testing plan, and confirmation materials; other subdirectories capture background research, brainstorming, tools, and database sketches. Note that the confirm markdown files, have the prompt to confirm that my spec and implementation/testing are in line with the rubric.
-- `context/` – [not edited.] As produced by Context.
-- `media/` – Screenshots referenced by the design docs.
-- `deno.json` / `deno.lock` – Deno task definitions, import maps, and dependency lock file.
+- [`src/`](src/) – Runtime code.
+  - [`concept_server.ts`](src/concept_server.ts) exposes every concept class as a REST-style API using Hono.
+  - [`interesting-moments.md`](src/interesting-moments.md) records notable Context interactions and decisions captured during implementation.
+  - [`concepts/`](src/concepts/) groups each concept (for example [`Visit`](src/concepts/Visit), [`Following`](src/concepts/Following), [`UserAuthentication`](src/concepts/UserAuthentication)). Each subdirectory holds the implementation, the scenario spec (`spec.md`), the tests (`*.test.ts`), the generated output (`output.md`), and the change log (`changes.md`).
+  - [`utils/`](src/utils) provides shared MongoDB helpers ([`database.ts`](src/utils/database.ts)), type aliases ([`types.ts`](src/utils/types.ts)), and the New York museums data set used by Visit ([`new-york-museums.json`](src/utils/new-york-museums.json)).
+- [`design/`](design/) – Assignment design work. Each concept folder supplies its specification, implementation notes, testing plan, and confirmation checklist (e.g. [`design/concepts/Visit`](design/concepts/Visit)). The other subdirectories capture background research, brainstorming, tooling, and database sketches.
+- [`context/`](context/) – Snapshot of the starter materials produced by Context; left unmodified.
+- [`media/`](media/) – Screenshots referenced from the design docs (e.g. [`media/obsidian_settings.png`](media/obsidian_settings.png)).
+- [`deno.json`](deno.json) / [`deno.lock`](deno.lock) – Deno task definitions, import maps, and dependency lock file.
+- [`geminiConfig.json`](geminiConfig.json) – Local configuration for the Gemini assistant workflow.
+- [`package-lock.json`](package-lock.json) – Present from earlier experiments; runtime relies on Deno’s npm compatibility layer rather than Node tooling.
 
 ## Prerequisites
-- [Deno](https://docs.deno.com/runtime/manual) 1.40+ (for `deno test` and `deno task`).
-- MongoDB instance available to the application and tests (local `mongod` or a cloud cluster).
+- [Deno](https://docs.deno.com/runtime/manual) 1.40+ for running tests and tasks.
+- A MongoDB instance reachable by the application and tests (local `mongod` or a cloud cluster).
 
 ## Additional Notes
-- I did not edit the learning or brainstorming folders. All the thought process was within concepts and background in the design folder.
-- I used Context to produce the New York museums JSON.
+- The learning and brainstorming folders under [`design/`](design/) were not edited; concept work lives alongside the spec/testing/confirm files.
+- The New York museums data ([`src/utils/new-york-museums.json`](src/utils/new-york-museums.json)) was produced with Context.
+- The final deliverables ALL all under src.
