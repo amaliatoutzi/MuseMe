@@ -93,15 +93,16 @@ Deno.test("Operational Principle: Upserting reviews correctly updates or creates
     });
     assertEquals(firstUpsertResult, {});
 
-    const firstReview = await concept._getReview({ user, item });
-    assertExists(firstReview);
-    assertObjectMatch(firstReview!, {
+    const firstReviews = await concept._getReview({ user, item }); // Renamed variable
+    assertEquals(firstReviews.length, 1); // Assert array length
+    const firstReview = firstReviews[0]; // Get the single review
+    assertObjectMatch(firstReview, {
       user,
       item,
       stars: 4,
       note: "Great place!",
     });
-    const firstUpdatedAt = firstReview!.updatedAt;
+    const firstUpdatedAt = firstReview.updatedAt;
     console.log(
       `[Trace] First review created: ${JSON.stringify(firstReview)}`,
     );
@@ -109,7 +110,6 @@ Deno.test("Operational Principle: Upserting reviews correctly updates or creates
     // Introduce a small delay to ensure updatedAt changes in the next upsert
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    // 2. Update the existing review
     console.log(
       `[Trace] Updating review for user ${user}, item ${item} to 5 stars with a new note.`,
     );
@@ -120,16 +120,16 @@ Deno.test("Operational Principle: Upserting reviews correctly updates or creates
       note: "Absolutely loved it!",
     });
     assertEquals(secondUpsertResult, {});
-
-    const updatedReview = await concept._getReview({ user, item });
-    assertExists(updatedReview);
-    assertObjectMatch(updatedReview!, {
+    const updatedReviews = await concept._getReview({ user, item }); // Renamed variable
+    assertEquals(updatedReviews.length, 1); // Assert array length
+    const updatedReview = updatedReviews[0]; // Get the single review
+    assertObjectMatch(updatedReview, {
       user,
       item,
       stars: 5,
       note: "Absolutely loved it!",
     });
-    assertNotEquals(updatedReview!.updatedAt, firstUpdatedAt); // Verify updatedAt changed
+    assertNotEquals(updatedReview.updatedAt, firstUpdatedAt); // Verify updatedAt changed
     console.log(`[Trace] Review updated: ${JSON.stringify(updatedReview)}`);
 
     // Clean up
@@ -269,11 +269,15 @@ Deno.test("Scenario 3: Clear an existing review successfully", async () => {
       stars: 2,
       note: "Needs improvement.",
     });
-    const reviewBeforeClear = await concept._getReview({ user, item });
-    assertExists(reviewBeforeClear);
+
+    const reviewsBeforeClear = await concept._getReview({ user, item }); // Renamed variable
+    assertEquals(reviewsBeforeClear.length, 1); // Assert array length
+    const reviewBeforeClear = reviewsBeforeClear[0]; // Get the single review
     console.log(
       `[Trace] Review before clear: ${JSON.stringify(reviewBeforeClear)}`,
     );
+
+    // ... (clear action)
 
     // Now, clear the review
     console.log(`[Trace] Clearing review for user ${user}, item ${item}.`);
@@ -284,10 +288,10 @@ Deno.test("Scenario 3: Clear an existing review successfully", async () => {
     console.log(
       `[Trace] Verifying review for user ${user}, item ${item} is gone.`,
     );
-    const reviewAfterClear = await concept._getReview({ user, item });
-    assertEquals(reviewAfterClear, null);
+    const reviewsAfterClear = await concept._getReview({ user, item }); // Renamed variable
+    assertEquals(reviewsAfterClear.length, 0); // Assert empty array
     console.log(
-      `[Trace] Review after clear: ${JSON.stringify(reviewAfterClear)}`,
+      `[Trace] Review after clear: ${JSON.stringify(reviewsAfterClear)}`,
     );
   } finally {
     await client.close();
@@ -404,4 +408,5 @@ Deno.test("Scenario 6: Upsert review with invalid stars rating (expect error)", 
     await client.close();
   }
 });
+
 ```

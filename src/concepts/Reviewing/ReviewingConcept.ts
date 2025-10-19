@@ -211,17 +211,19 @@ export default class ReviewingConcept {
 
   /**
    * @query _getReview
-   * Effects: Returns a single review document if found for the specified user and item.
+   * Effects: Returns a single review document in an array if found for the specified user and item.
+   *   Returns an empty array if no review is found.
    * @param {object} params - The parameters to identify the review.
    * @param {User} params.user - The ID of the user.
    * @param {ItemId} params.item - The ID of the item.
-   * @returns A `Review` object if found, otherwise `null`.
+   * @returns An array containing a `Review` object if found, otherwise an empty array.
    */
   async _getReview(
     { user, item }: { user: User; item: ItemId },
-  ): Promise<Review | null> {
+  ): Promise<Review[]> { // Changed return type to Promise<Review[]>
     const reviewId = getReviewId(user, item);
-    return await this.reviews.findOne({ _id: reviewId });
+    const review = await this.reviews.findOne({ _id: reviewId });
+    return review ? [review] : []; // Wrap the result in an array
   }
 
   /**

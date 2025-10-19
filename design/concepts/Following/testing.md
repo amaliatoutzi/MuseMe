@@ -304,27 +304,42 @@ Deno.test("FollowingConcept: Operational Principle - Mutual Follows Grant Friend
       {},
       "Alice should successfully follow Bob",
     );
-    const aliceFollowsBob = await followingConcept._getFollows({
+    // Query: _getFollows now returns an array of named dictionaries
+    const aliceFollowsBobArray = await followingConcept._getFollows({
       follower: userAlice,
       followee: userBob,
     });
-    assertNotEquals(
-      aliceFollowsBob,
-      null,
-      "Alice's follow of Bob should be recorded",
+    assertEquals(
+      aliceFollowsBobArray.length,
+      1,
+      "Alice's follow of Bob should be recorded (one result)",
+    );
+    assertObjectMatch(aliceFollowsBobArray[0].follow, { // Access `follow` property
+      follower: userAlice,
+      followee: userBob,
+    });
+    console.log(
+      `Query: Alice's follow of Bob found: ${
+        JSON.stringify(aliceFollowsBobArray[0].follow)
+      }`,
     );
 
     // Trace: Check if Alice and Bob are friends (should be false, as it's not mutual yet)
-    let areAliceBobFriends = await followingConcept._areFriends({
+    // Query: _areFriends now returns an array of named dictionaries
+    let areAliceBobFriendsResult = await followingConcept._areFriends({
       userA: userAlice,
       userB: userBob,
     });
     assertEquals(
-      areAliceBobFriends,
+      areAliceBobFriendsResult[0].areFriends, // Access `areFriends` property
       false,
       "Alice and Bob should not be friends yet",
     );
-    console.log(`Query: Alice and Bob are friends? ${areAliceBobFriends}`);
+    console.log(
+      `Query: Alice and Bob are friends? ${
+        areAliceBobFriendsResult[0].areFriends
+      }`,
+    );
 
     // Trace: Bob follows Alice
     console.log(`Action: Bob (${userBob}) follows Alice (${userAlice})`);
@@ -337,27 +352,42 @@ Deno.test("FollowingConcept: Operational Principle - Mutual Follows Grant Friend
       {},
       "Bob should successfully follow Alice",
     );
-    const bobFollowsAlice = await followingConcept._getFollows({
+    // Query: _getFollows now returns an array of named dictionaries
+    const bobFollowsAliceArray = await followingConcept._getFollows({
       follower: userBob,
       followee: userAlice,
     });
-    assertNotEquals(
-      bobFollowsAlice,
-      null,
-      "Bob's follow of Alice should be recorded",
+    assertEquals(
+      bobFollowsAliceArray.length,
+      1,
+      "Bob's follow of Alice should be recorded (one result)",
+    );
+    assertObjectMatch(bobFollowsAliceArray[0].follow, { // Access `follow` property
+      follower: userBob,
+      followee: userAlice,
+    });
+    console.log(
+      `Query: Bob's follow of Alice found: ${
+        JSON.stringify(bobFollowsAliceArray[0].follow)
+      }`,
     );
 
     // Trace: Check if Alice and Bob are friends (should be true now)
-    areAliceBobFriends = await followingConcept._areFriends({
+    // Query: _areFriends now returns an array of named dictionaries
+    areAliceBobFriendsResult = await followingConcept._areFriends({
       userA: userAlice,
       userB: userBob,
     });
     assertEquals(
-      areAliceBobFriends,
+      areAliceBobFriendsResult[0].areFriends, // Access `areFriends` property
       true,
       "Alice and Bob should now be friends",
     );
-    console.log(`Query: Alice and Bob are friends? ${areAliceBobFriends}`);
+    console.log(
+      `Query: Alice and Bob are friends? ${
+        areAliceBobFriendsResult[0].areFriends
+      }`,
+    );
 
     console.log(`--- Operational Principle Test Complete ---`);
   } finally {
@@ -383,44 +413,59 @@ Deno.test("FollowingConcept: Basic Follow/Unfollow and Querying", async (t) => {
     assertEquals(followResult, {}, "Alice should successfully follow Charlie");
 
     // Verify the follow exists
-    const aliceToCharlie = await followingConcept._getFollows({
+    // Query: _getFollows now returns an array of named dictionaries
+    const aliceToCharlieArray = await followingConcept._getFollows({
       follower: userAlice,
       followee: userCharlie,
     });
-    assertNotEquals(
-      aliceToCharlie,
-      null,
+    assertEquals(
+      aliceToCharlieArray.length,
+      1,
       "Follow relationship (Alice -> Charlie) should exist",
     );
-    assertObjectMatch(aliceToCharlie!, {
+    assertObjectMatch(aliceToCharlieArray[0].follow, { // Access `follow` property
       follower: userAlice,
       followee: userCharlie,
     });
-    console.log(`Query: Alice follows Charlie? Yes`);
+    console.log(
+      `Query: Alice follows Charlie? Yes (${
+        JSON.stringify(aliceToCharlieArray[0].follow)
+      })`,
+    );
 
     // Get followees for Alice
+    // Query: _getFollowees now returns an array of named dictionaries
     let aliceFollowees = await followingConcept._getFollowees({
       user: userAlice,
     });
     assertEquals(
-      aliceFollowees.includes(userCharlie),
+      aliceFollowees.map((f) => f.followee).includes(userCharlie), // Map to get the user IDs
       true,
       "Alice's followees should include Charlie",
     );
     assertEquals(aliceFollowees.length, 1, "Alice should have 1 followee");
-    console.log(`Query: Alice's followees: ${aliceFollowees}`);
+    console.log(
+      `Query: Alice's followees: ${
+        JSON.stringify(aliceFollowees.map((f) => f.followee))
+      }`,
+    );
 
     // Get followers for Charlie
+    // Query: _getFollowers now returns an array of named dictionaries
     let charlieFollowers = await followingConcept._getFollowers({
       user: userCharlie,
     });
     assertEquals(
-      charlieFollowers.includes(userAlice),
+      charlieFollowers.map((f) => f.follower).includes(userAlice), // Map to get the user IDs
       true,
       "Charlie's followers should include Alice",
     );
     assertEquals(charlieFollowers.length, 1, "Charlie should have 1 follower");
-    console.log(`Query: Charlie's followers: ${charlieFollowers}`);
+    console.log(
+      `Query: Charlie's followers: ${
+        JSON.stringify(charlieFollowers.map((f) => f.follower))
+      }`,
+    );
 
     // Scenario: Alice unfollows Charlie
     console.log(
@@ -437,38 +482,49 @@ Deno.test("FollowingConcept: Basic Follow/Unfollow and Querying", async (t) => {
     );
 
     // Verify the follow no longer exists
-    const noAliceToCharlie = await followingConcept._getFollows({
+    // Query: _getFollows now returns an array of named dictionaries
+    const noAliceToCharlieArray = await followingConcept._getFollows({
       follower: userAlice,
       followee: userCharlie,
     });
     assertEquals(
-      noAliceToCharlie,
-      null,
+      noAliceToCharlieArray.length,
+      0, // Expect empty array
       "Follow relationship (Alice -> Charlie) should no longer exist",
     );
     console.log(`Query: Alice follows Charlie? No`);
 
     // Get followees for Alice again
+    // Query: _getFollowees now returns an array of named dictionaries
     aliceFollowees = await followingConcept._getFollowees({ user: userAlice });
     assertEquals(
-      aliceFollowees.includes(userCharlie),
+      aliceFollowees.map((f) => f.followee).includes(userCharlie),
       false,
       "Alice's followees should no longer include Charlie",
     );
     assertEquals(aliceFollowees.length, 0, "Alice should have 0 followees");
-    console.log(`Query: Alice's followees: ${aliceFollowees}`);
+    console.log(
+      `Query: Alice's followees: ${
+        JSON.stringify(aliceFollowees.map((f) => f.followee))
+      }`,
+    );
 
     // Get followers for Charlie again
+    // Query: _getFollowers now returns an array of named dictionaries
     charlieFollowers = await followingConcept._getFollowers({
       user: userCharlie,
     });
     assertEquals(
-      charlieFollowers.includes(userAlice),
+      charlieFollowers.map((f) => f.follower).includes(userAlice),
       false,
       "Charlie's followers should no longer include Alice",
     );
     assertEquals(charlieFollowers.length, 0, "Charlie should have 0 followers");
-    console.log(`Query: Charlie's followers: ${charlieFollowers}`);
+    console.log(
+      `Query: Charlie's followers: ${
+        JSON.stringify(charlieFollowers.map((f) => f.follower))
+      }`,
+    );
 
     console.log(`--- Basic Follow/Unfollow Test Complete ---`);
   } finally {
@@ -602,49 +658,71 @@ Deno.test("FollowingConcept: Asymmetric Follow and Friendship Status", async (t)
 
     assertEquals(res, {}, "follow() should succeed");
 
-    const edge = await followingConcept._getFollows({
+    // Query: _getFollows now returns an array of named dictionaries
+    const edgeArray = await followingConcept._getFollows({
       follower: userDavid,
       followee: userCharlie,
     });
 
-    assertNotEquals(edge, null, "David should successfully follow Charlie");
+    assertEquals(
+      edgeArray.length,
+      1,
+      "David should successfully follow Charlie",
+    );
+    assertObjectMatch(edgeArray[0].follow, {
+      follower: userDavid,
+      followee: userCharlie,
+    });
     console.log(`(David follows Charlie)`);
 
     // Check friendship status: should be false
-    const areDavidCharlieFriends = await followingConcept._areFriends({
+    // Query: _areFriends now returns an array of named dictionaries
+    const areDavidCharlieFriendsResult = await followingConcept._areFriends({
       userA: userDavid,
       userB: userCharlie,
     });
     assertEquals(
-      areDavidCharlieFriends,
+      areDavidCharlieFriendsResult[0].areFriends, // Access `areFriends` property
       false,
       "David and Charlie should not be friends (asymmetric)",
     );
     console.log(
-      `Query: David and Charlie are friends? ${areDavidCharlieFriends}`,
+      `Query: David and Charlie are friends? ${
+        areDavidCharlieFriendsResult[0].areFriends
+      }`,
     );
 
     // Check David's followees
+    // Query: _getFollowees now returns an array of named dictionaries
     const davidFollowees = await followingConcept._getFollowees({
       user: userDavid,
     });
     assertEquals(
-      davidFollowees,
+      davidFollowees.map((f) => f.followee), // Map to get the user IDs
       [userCharlie],
       "David should follow only Charlie",
     );
-    console.log(`Query: David's followees: ${davidFollowees}`);
+    console.log(
+      `Query: David's followees: ${
+        JSON.stringify(davidFollowees.map((f) => f.followee))
+      }`,
+    );
 
     // Check Charlie's followers
+    // Query: _getFollowers now returns an array of named dictionaries
     const charlieFollowers = await followingConcept._getFollowers({
       user: userCharlie,
     });
     assertEquals(
-      charlieFollowers,
+      charlieFollowers.map((f) => f.follower), // Map to get the user IDs
       [userDavid],
       "Charlie should have only David as a follower",
     );
-    console.log(`Query: Charlie's followers: ${charlieFollowers}`);
+    console.log(
+      `Query: Charlie's followers: ${
+        JSON.stringify(charlieFollowers.map((f) => f.follower))
+      }`,
+    );
 
     // Scenario: Charlie decides to follow David
     console.log(
@@ -657,26 +735,38 @@ Deno.test("FollowingConcept: Asymmetric Follow and Friendship Status", async (t)
     });
     assertEquals(res2, {}, "follow() should succeed");
 
-    const edge2 = await followingConcept._getFollows({
+    // Query: _getFollows now returns an array of named dictionaries
+    const edge2Array = await followingConcept._getFollows({
       follower: userCharlie,
       followee: userDavid,
     });
 
-    assertNotEquals(edge2, null, "Charlie should successfully follow David");
+    assertEquals(
+      edge2Array.length,
+      1,
+      "Charlie should successfully follow David",
+    );
+    assertObjectMatch(edge2Array[0].follow, {
+      follower: userCharlie,
+      followee: userDavid,
+    });
     console.log(`(Charlie follows David)`);
 
     // Check friendship status again: should be true now
-    const nowAreDavidCharlieFriends = await followingConcept._areFriends({
+    // Query: _areFriends now returns an array of named dictionaries
+    const nowAreDavidCharlieFriendsResult = await followingConcept._areFriends({
       userA: userDavid,
       userB: userCharlie,
     });
     assertEquals(
-      nowAreDavidCharlieFriends,
+      nowAreDavidCharlieFriendsResult[0].areFriends, // Access `areFriends` property
       true,
       "David and Charlie should now be friends (mutual)",
     );
     console.log(
-      `Query: David and Charlie are friends? ${nowAreDavidCharlieFriends}`,
+      `Query: David and Charlie are friends? ${
+        nowAreDavidCharlieFriendsResult[0].areFriends
+      }`,
     );
 
     console.log(`--- Asymmetric Follow Test Complete ---`);
@@ -700,62 +790,89 @@ Deno.test("FollowingConcept: Multiple Follows and Complex Scenarios", async (t) 
       followee: userCharlie,
     });
     await followingConcept.follow({ follower: userAlice, followee: userDavid });
+    // Query: _getFollowees now returns an array of named dictionaries
     assertEquals(
       (await followingConcept._getFollowees({ user: userAlice })).length,
       3,
       "Alice should follow 3 users",
     );
     console.log(
-      `Query: Alice's followees: ${await followingConcept._getFollowees({
-        user: userAlice,
-      })}`,
+      `Query: Alice's followees: ${
+        JSON.stringify(
+          (await followingConcept._getFollowees({ user: userAlice })).map((f) =>
+            f.followee
+          ),
+        )
+      }`,
     );
 
     // Bob follows Alice, Charlie
     console.log(`Action: Bob follows Alice, Charlie`);
     await followingConcept.follow({ follower: userBob, followee: userAlice });
     await followingConcept.follow({ follower: userBob, followee: userCharlie });
+    // Query: _getFollowees now returns an array of named dictionaries
     assertEquals(
       (await followingConcept._getFollowees({ user: userBob })).length,
       2,
       "Bob should follow 2 users",
     );
     console.log(
-      `Query: Bob's followees: ${await followingConcept._getFollowees({
-        user: userBob,
-      })}`,
+      `Query: Bob's followees: ${
+        JSON.stringify(
+          (await followingConcept._getFollowees({ user: userBob })).map((f) =>
+            f.followee
+          ),
+        )
+      }`,
     );
 
     // Check friendship: Alice & Bob
-    let areAliceBobFriends = await followingConcept._areFriends({
+    // Query: _areFriends now returns an array of named dictionaries
+    let areAliceBobFriendsResult = await followingConcept._areFriends({
       userA: userAlice,
       userB: userBob,
     });
-    assertEquals(areAliceBobFriends, true, "Alice and Bob should be friends");
-    console.log(`Query: Alice & Bob friends? ${areAliceBobFriends}`);
+    assertEquals(
+      areAliceBobFriendsResult[0].areFriends,
+      true,
+      "Alice and Bob should be friends",
+    );
+    console.log(
+      `Query: Alice & Bob friends? ${areAliceBobFriendsResult[0].areFriends}`,
+    );
 
     // Check friendship: Alice & Charlie
-    let areAliceCharlieFriends = await followingConcept._areFriends({
+    // Query: _areFriends now returns an array of named dictionaries
+    let areAliceCharlieFriendsResult = await followingConcept._areFriends({
       userA: userAlice,
       userB: userCharlie,
     });
     assertEquals(
-      areAliceCharlieFriends,
+      areAliceCharlieFriendsResult[0].areFriends,
       false,
       "Alice and Charlie should not be friends yet (Charlie doesn't follow Alice)",
     );
-    console.log(`Query: Alice & Charlie friends? ${areAliceCharlieFriends}`);
+    console.log(
+      `Query: Alice & Charlie friends? ${
+        areAliceCharlieFriendsResult[0].areFriends
+      }`,
+    );
 
     // Check Charlie's followers (Alice, Bob)
+    // Query: _getFollowers now returns an array of named dictionaries
     const charlieFollowers = await followingConcept._getFollowers({
       user: userCharlie,
     });
     assertEquals(
-      charlieFollowers.sort(),
+      charlieFollowers.map((f) => f.follower).sort(), // Map to get user IDs, then sort for comparison
       [userAlice, userBob].sort(),
       "Charlie should have Alice and Bob as followers",
     );
-    console.log(`Query: Charlie's followers: ${charlieFollowers}`);
+    console.log(
+      `Query: Charlie's followers: ${
+        JSON.stringify(charlieFollowers.map((f) => f.follower))
+      }`,
+    );
 
     // Alice unfollows David
     console.log(`Action: Alice unfollows David`);
@@ -763,25 +880,36 @@ Deno.test("FollowingConcept: Multiple Follows and Complex Scenarios", async (t) 
       follower: userAlice,
       followee: userDavid,
     });
+    // Query: _getFollowees now returns an array of named dictionaries
     assertEquals(
       (await followingConcept._getFollowees({ user: userAlice })).length,
       2,
       "Alice should now follow 2 users",
     );
+    // Query: _getFollowers now returns an array of named dictionaries
     const davidFollowers = await followingConcept._getFollowers({
       user: userDavid,
     });
     assertEquals(davidFollowers.length, 0, "David should have no followers");
     console.log(
-      `Query: Alice's followees: ${await followingConcept._getFollowees({
-        user: userAlice,
-      })}`,
+      `Query: Alice's followees: ${
+        JSON.stringify(
+          (await followingConcept._getFollowees({ user: userAlice })).map((f) =>
+            f.followee
+          ),
+        )
+      }`,
     );
-    console.log(`Query: David's followers: ${davidFollowers}`);
+    console.log(
+      `Query: David's followers: ${
+        JSON.stringify(davidFollowers.map((f) => f.follower))
+      }`,
+    );
 
     console.log(`--- Multiple Follows and Complex Scenarios Test Complete ---`);
   } finally {
     await client.close();
   }
 });
+
 ```

@@ -1,0 +1,153 @@
+---
+timestamp: 'Sun Oct 19 2025 16:17:05 GMT-0400 (Eastern Daylight Time)'
+parent: '[[../20251019_161705.9275d463.md]]'
+content_id: b66749f6b4871728695d36ac6dba0d7b5b4ac5bb817ab3b2bfea198af72a9b77
+---
+
+# response:
+
+```typescript
+// src/UserPreferences/UserPreferencesConcept.ts
+import { Collection, Db } from "npm:mongodb";
+import { Empty, ID } from "@utils/types.ts";
+import { freshID } from "@utils/database.ts";
+
+/**
+ * @concept UserPreferences [User, Tag]
+ * @purpose store durable taste tags for ranking and cold-start for individual users.
+ * @principle if a Preference(user, tag) exists, then ranking functions may treat that tag as an enduring positive signal for user until removed. The validity of the `tag` ID itself is guaranteed by the calling context (e.g., a TagCatalog concept or application-level validation).
+ */
+// Declare collection prefix, use concept name
+const PREFIX = "UserPreferences.";
+
+// Generic types of this concept, treated polymorphically as IDs.
+type User = ID;
+type Tag = ID;
+
+// REMOVED: The PresetTagDoc interface is no longer part of this concept's state.
+// The concept no longer manages the list of preset tags directly.
+
+/**
+ * @state a set of Preferences
+ * Documents representing a user's chosen taste tags, referencing externally managed tags.
+ */
+interface PreferenceDoc {
+  _id: ID; // Unique ID for this specific preference entry
+  user: User; // The ID of the user who made the preference
+  tag: Tag; // The ID of the preferred tag (assumed to be externally valid)
+  createdAt: Date; // Timestamp when the preference was added
+}
+
+export default class UserPreferencesConcept {
+  // REMOVED: private presetTags: Collection<PresetTagDoc>;
+  // This collection is no longer managed by UserPreferencesConcept.
+  private preferences: Collection<PreferenceDoc>;
+
+  constructor(private readonly db: Db) {
+    // Only the preferences collection is relevant to this concept's state.
+    this.preferences = this.db.collection(PREFIX + "preferences");
+  }
+
+  /**
+   * @action addPreference
+   * @param {Object} args - The arguments for the action.
+   * @param {User} args.user - The ID of the user.
+   * @param {Tag} args.tag - The ID of the tag to add as a preference.
+   * @returns {Promise<Empty | { error: string }>} An empty object on success, or an object with an error message on failure.
+   * @requires user exists, tag is a valid and existing tag ID (externally verified), and Preferences(user, tag) not present
+   * @effects create Preferences(user, tag, createdAt := now)
+   */
+  async addPreference(
+    { user, tag }: { user: User; tag: Tag },
+  ): Promise<Empty | { error: string }> {
+    // PRECONDITION 1: tag is a valid and existing tag ID (externally verified)
+    // As per the revised spec, this validation is handled by the calling context (e.g., a sync).
+    // This concept assumes that the 'tag' ID passed here is already verified as valid.
+    // If an invalid tag ID were passed, it would be treated as a preference for that specific ID.
+
+    // PRECONDITION 2: user exists
+    // Similar to tag validation, user existence is handled by external concepts/syncs.
+    // This concept assumes the 'user' ID passed is valid.
+
+    // PRECONDITION 3: Preferences(user, tag) not present
+    const existingPreference = await this.preferences.findOne({ user, tag });
+    if (existingPreference) {
+      return {
+        error: `User '${user}' already has a preference for tag '${tag}'.`,
+      };
+    }
+
+    // EFFECTS: create Preferences(user, tag, createdAt := now)
+    const newPreference: PreferenceDoc = {
+      _id: freshID(), // Generate a unique ID for this preference entry
+      user,
+      tag,
+      createdAt: new Date(),
+    };
+
+    try {
+      await this.preferences.insertOne(newPreference);
+      return {};
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { error: `Failed to add preference: ${msg}` };
+    }
+  }
+
+  /**
+   * @action removePreference
+   * @param {Object} args - The arguments for the action.
+   * @param {User} args.user - The ID of the user.
+   * @param {Tag} args.tag - The ID of the tag to remove from preferences.
+   * @returns {Promise<Empty | { error: string }>} An empty object on success, or an object with an error message on failure.
+   * @requires Preferences(user, tag) exists
+   * @effects delete that Preferences
+   */
+  async removePreference(
+    { user, tag }: { user: User; tag: Tag },
+  ): Promise<Empty | { error: string }> {
+    // PRECONDITION: Preferences(user, tag) exists
+    const existingPreference = await this.preferences.findOne({ user, tag });
+    if (!existingPreference) {
+      return {
+        error: `No preference found for user '${user}' and tag '${tag}'.`,
+      };
+    }
+
+    // EFFECTS: delete that Preferences
+    try {
+      await this.preferences.deleteOne({ _id: existingPreference._id });
+      return {};
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { error: `Failed to remove preference: ${msg}` };
+    }
+  }
+
+  // --- Queries (Implicitly defined, but useful to add explicit ones for visibility and testing) ---
+
+  /**
+   * @query _getPreferencesForUser
+   * @param {User} user - The ID of the user.
+   * @returns {Promise<Tag[]>} A list of tag IDs preferred by the specified user.
+   * @effects Returns all tags preferred by a specific user.
+   */
+  async _getPreferencesForUser(user: User): Promise<Tag[]> {
+    const userPreferences = await this.preferences.find({ user }).toArray();
+    return userPreferences.map((pref) => pref.tag);
+  }
+
+  /**
+   * @query _getUsersByPreferenceTag
+   * @param {Tag} tag - The ID of the tag.
+   * @returns {Promise<User[]>} A list of user IDs who have preferred the specific tag.
+   * @effects Returns all users who have preferred a specific tag.
+   */
+  async _getUsersByPreferenceTag(tag: Tag): Promise<User[]> {
+    const usersWithTag = await this.preferences.find({ tag }).toArray();
+    return usersWithTag.map((pref) => pref.user);
+  }
+
+  // REMOVED: _getPresetTags query, as PresetTags are no longer managed by this concept.
+}
+```

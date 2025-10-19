@@ -199,6 +199,7 @@ Deno.test("2. Scenario: Invalid createVisit attempts", async () => {
       }`,
     );
   } finally {
+    await db.dropDatabase();
     await client.close();
   }
 });
@@ -319,31 +320,26 @@ Deno.test("4. Scenario: Edit and Remove Visit Entry", async () => {
   try {
     console.log("\n--- Test 4: Edit and Remove Visit Entry ---");
 
-    // Setup: fresh visit and an entry to edit/remove
-    // Setup: fresh visit and an entry to edit/remove
+    // Fresh visit
     const { visitId: aliceVisitId } = (await visitConcept.createVisit({
       owner: userAlice,
       museum: metMuseumId,
     })) as { visitId: ID };
 
+    // Seed two entries
     await visitConcept.addEntry({
       visit: aliceVisitId,
-      exhibit: egyptianArtExhibit, // or whichever you’ll edit/remove
+      exhibit: egyptianArtExhibit,
       note: "Initially liked it.",
       user: userAlice,
     });
-
     await visitConcept.addEntry({
       visit: aliceVisitId,
       exhibit: europeanSculptureExhibit,
       user: userAlice,
     });
 
-    const entry =
-      (await visitConcept._getEntriesByVisit({ visitId: aliceVisitId }))[0];
-    const armsAndArmorEntryId = entry._id;
-
-    // Action: add a new entry to edit/remove later
+    // Add the Arms & Armor entry (the one we will edit/remove)
     console.log("Adding an entry for Arms and Armor to edit/remove.");
     const addResult = await visitConcept.addEntry({
       visit: aliceVisitId,
@@ -360,6 +356,8 @@ Deno.test("4. Scenario: Edit and Remove Visit Entry", async () => {
       undefined,
       "addEntry for Arms and Armor should succeed",
     );
+
+    // Now get THAT entry's id
     const entriesBeforeEdit = await visitConcept._getEntriesByVisit({
       visitId: aliceVisitId,
     });
@@ -368,16 +366,18 @@ Deno.test("4. Scenario: Edit and Remove Visit Entry", async () => {
       3,
       "There should be 3 entries before editing",
     );
+
     const armsAndArmorEntry = entriesBeforeEdit.find((e) =>
       e.exhibit === armsAndArmorExhibit
     );
     assertExists(armsAndArmorEntry, "Arms and Armor entry should exist");
-    //const armsAndArmorEntryId = armsAndArmorEntry!._id;
+    const armsAndArmorEntryId = armsAndArmorEntry!._id; // <-- correct ID, captured after creation
+
     const visitUpdatedAtBeforeEdit =
       (await visitConcept._getVisit({ visitId: aliceVisitId }))?.updatedAt;
     console.log("Arms and Armor entry added.");
 
-    // Action: editEntry
+    // Edit that entry
     console.log(`Editing entry ${armsAndArmorEntryId}.`);
     const editResult = await visitConcept.editEntry({
       visitEntryId: armsAndArmorEntryId,
@@ -393,7 +393,7 @@ Deno.test("4. Scenario: Edit and Remove Visit Entry", async () => {
     );
     console.log("Entry edited.");
 
-    // Query: Verify entry updated and visit updatedAt
+    // Verify edit + updatedAt bump
     const editedEntry = await visitConcept._getEntry({
       visitEntryId: armsAndArmorEntryId,
     });
@@ -403,6 +403,7 @@ Deno.test("4. Scenario: Edit and Remove Visit Entry", async () => {
       editedEntry.photoUrl,
       "http://example.com/arms-and-armor-edited.jpg",
     );
+
     const visitUpdatedAtAfterEdit =
       (await visitConcept._getVisit({ visitId: aliceVisitId }))?.updatedAt;
     assertNotEquals(
@@ -412,7 +413,7 @@ Deno.test("4. Scenario: Edit and Remove Visit Entry", async () => {
     );
     console.log("Edited entry verified, visit updatedAt updated.");
 
-    // Action: removeEntry
+    // Remove the same entry
     console.log(`Removing entry ${armsAndArmorEntryId}.`);
     const removeResult = await visitConcept.removeEntry({
       visitEntryId: armsAndArmorEntryId,
@@ -426,7 +427,7 @@ Deno.test("4. Scenario: Edit and Remove Visit Entry", async () => {
     );
     console.log("Entry removed.");
 
-    // Query: Verify entry is deleted and visit updatedAt
+    // Verify deletion + updatedAt bump
     const removedEntry = await visitConcept._getEntry({
       visitEntryId: armsAndArmorEntryId,
     });
@@ -435,6 +436,7 @@ Deno.test("4. Scenario: Edit and Remove Visit Entry", async () => {
       null,
       "Entry should no longer exist after removal",
     );
+
     const entriesAfterRemove = await visitConcept._getEntriesByVisit({
       visitId: aliceVisitId,
     });
@@ -443,6 +445,7 @@ Deno.test("4. Scenario: Edit and Remove Visit Entry", async () => {
       2,
       "There should be 2 entries after removal",
     );
+
     const visitUpdatedAtAfterRemove =
       (await visitConcept._getVisit({ visitId: aliceVisitId }))?.updatedAt;
     assertNotEquals(
