@@ -1,50 +1,8 @@
-[@application-pitch](../../background/application-pitch.md)
-
-[@concept-rubric](../../background/detailed/concept-rubric.md)
-
-[@concept-state](../../background/detailed/concept-state.md)
-
-[@concept-design-overview](../../background/concept-design-overview.md)
-
-[@concept-specifications](../../background/concept-specifications.md)
-
-[@implementing-concepts](../../background/implementing-concepts.md)
-
-# implement: UserAuthentication
-
-# ROLE
-You are a senior TypeScript engineer implementing a small, self-contained domain module from a formal concept spec.
-
-# CONCEPT TO IMPLEMENT (authoritative spec; treat “principle” as operational behavior)
-
-## concept **UserAuthentication** [User]
-
-**purpose**
-limit access to known users
-
-**principle**
-after a user registers with a username and a password, they can authenticate with the same username+password and be treated as the same user.
-
-**state**
-a set of **Credentials** with
-- an owner **User**
-- a username **String** (unique)
-- a passwordHash **Hash**
-- a createdAt **DateTime**
-- an updatedAt **DateTime**
-
-**actions**
-**register**(username: String, password: String) : User
-- requires no existing Credentials with this username
-- effects create Credentials(owner := new User, username, passwordHash := hash(password), createdAt := now, updatedAt := now); return owner
-
-**authenticate**(username: String, password: String): User
-- requires Credentials(username) exists and verifyHash(password, passwordHash)
-- effects none
-
-# Notes:
-
-Use proper hashing, salting, and other best practices utilizing the "node:crypto" import.
+---
+timestamp: 'Sun Oct 19 2025 13:41:28 GMT-0400 (Eastern Daylight Time)'
+parent: '[[../20251019_134128.2109f3a4.md]]'
+content_id: 1bf077ab648a84782a04e0fdb646b5ba55a26ce6df1113cbf6383bf30dd1cc09
+---
 
 # response:
 
@@ -52,10 +10,9 @@ Use proper hashing, salting, and other best practices utilizing the "node:crypto
 // file: src/concepts/UserAuthenticationConcept.ts
 
 import { Collection, Db } from "npm:mongodb";
-import { Empty, ID } from "@utils/types.ts";
+import { ID, Empty } from "@utils/types.ts";
 import { freshID } from "@utils/database.ts";
 import * as crypto from "node:crypto";
-import { Buffer } from "node:buffer";
 
 // Declare collection prefix, use concept name
 const PREFIX = "UserAuthentication" + ".";
@@ -68,13 +25,6 @@ const SALT_LENGTH = 16; // 16 bytes for salt, typically stored with the hash
 const HASH_ITERATIONS = 100000; // Number of iterations for PBKDF2
 const HASH_KEYLEN = 64; // Length of the derived key (hashed password) in bytes
 const HASH_ALGORITHM = "sha512"; // Hashing algorithm to use
-
-function isBlank(s: string) {
-  return !s || s.trim().length === 0;
-}
-function hasEdgeSpaces(s: string) {
-  return s !== s.trim();
-}
 
 /**
  * Hashes a plaintext password using PBKDF2 with a randomly generated salt.
@@ -172,11 +122,9 @@ export default class UserAuthenticationConcept {
 
   constructor(private readonly db: Db) {
     this.credentials = this.db.collection(PREFIX + "credentials");
-    void this.credentials
-      .createIndex({ username: 1 }, { unique: true })
-      .catch((e) =>
-        console.warn("UserAuth index creation failed (non-fatal):", e)
-      );
+
+    // Ensure the username is unique across all credentials documents for registration validation
+    this.credentials.createIndex({ username: 1 }, { unique: true });
   }
 
   /**
@@ -190,9 +138,6 @@ export default class UserAuthenticationConcept {
   async register(
     { username, password }: { username: string; password: string },
   ): Promise<{ user: User } | { error: string }> {
-    if (isBlank(username)) return { error: "Username cannot be empty." };
-    if (hasEdgeSpaces(username)) return { error: "Username cannot be empty." }; // your tests expect this same message
-    if (isBlank(password)) return { error: "Password cannot be empty." };
     // Precondition check: no existing Credentials with this username
     // The unique index handles the strict enforcement, but this provides a friendly error.
     const existingCredentials = await this.credentials.findOne({ username });
@@ -233,9 +178,6 @@ export default class UserAuthenticationConcept {
   async authenticate(
     { username, password }: { username: string; password: string },
   ): Promise<{ user: User } | { error: string }> {
-    if (isBlank(username)) return { error: "Username cannot be empty." };
-    if (hasEdgeSpaces(username)) return { error: "Username cannot be empty." }; // same expectation as tests
-    if (isBlank(password)) return { error: "Password cannot be empty." };
     // Find credentials for the given username
     const userCredentials = await this.credentials.findOne({ username });
 
@@ -260,5 +202,4 @@ export default class UserAuthenticationConcept {
     return { user: userCredentials._id }; // Return the authenticated User ID
   }
 }
-
 ```
