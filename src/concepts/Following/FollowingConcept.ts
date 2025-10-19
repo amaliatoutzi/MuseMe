@@ -1,6 +1,6 @@
 import { Collection, Db } from "npm:mongodb";
-import { Empty, ID } from "@utils/types.ts"; // Adjust path as per your project structure
-import { freshID } from "@utils/database.ts"; // Adjust path as per your project structure
+import { Empty, ID } from "../../utils/types.ts"; // Adjust path as per your project structure
+import { freshID } from "../../utils/database.ts"; // Adjust path as per your project structure
 
 /**
  * concept Following [User]
@@ -22,7 +22,7 @@ type User = ID;
  *   a createdAt DateTime
  */
 interface FollowsDoc {
-  _id: ID; // Unique identifier for the follow relationship itself
+  _id: ID; // Unique identifier for the follow relationship document
   follower: User;
   followee: User;
   createdAt: Date;
@@ -37,16 +37,20 @@ export default class FollowingConcept {
   constructor(private readonly db: Db) {
     this.follows = this.db.collection(PREFIX + "follows");
     // Ensure a unique index on (follower, followee) to prevent duplicate follow relationships.
-    // This also helps optimize queries for specific follow relationships.
+    // This also helps optimize queries for specific follow relationships and enforce uniqueness.
     this.follows.createIndex({ follower: 1, followee: 1 }, { unique: true });
   }
 
   /**
    * follow (follower: User, followee: User)
    *
-   * requires: follower ≠ followee, both users exist (implicitly handled by syncs),
-   *           and no Follows(follower, followee) currently exists.
-   * effects: create a new Follows(follower, followee, createdAt := now) entry in the state.
+   * requires:
+   *   - follower ≠ followee (a user cannot follow themselves).
+   *   - both users exist (this is an application boundary concern, handled by syncs;
+   *     this concept assumes valid User IDs are provided).
+   *   - no Follows(follower, followee) currently exists.
+   * effects:
+   *   - create a new Follows(follower, followee, createdAt := now) entry in the state.
    */
   async follow({
     follower,
@@ -55,17 +59,13 @@ export default class FollowingConcept {
     follower: User;
     followee: User;
   }): Promise<Empty | { error: string }> {
-    // Precondition: follower cannot follow themselves
+    // Precondition check: follower cannot follow themselves
     if (follower === followee) {
       return { error: "A user cannot follow themselves." };
     }
 
-    // Precondition: `both users exist` is a concern for a higher-level synchronization logic
-    // (e.g., via a `UserAuthentication` or `UserProfile` concept).
-    // This `Following` concept assumes that `follower` and `followee` IDs are valid inputs.
-
-    // Check if the follow relationship already exists before attempting insertion
-    // to provide a more specific error message than a MongoDB duplicate key error.
+    // Precondition check: no Follows(follower, followee) currently exists.
+    // We check this explicitly to return a more informative error.
     const existingFollow = await this.follows.findOne({ follower, followee });
     if (existingFollow) {
       return {
@@ -73,7 +73,7 @@ export default class FollowingConcept {
       };
     }
 
-    // Effects: Create the new follow relationship
+    // Effects: Create the new follow relationship document
     const newFollow: FollowsDoc = {
       _id: freshID(), // Generate a unique ID for this specific follow document
       follower,
@@ -83,9 +83,10 @@ export default class FollowingConcept {
 
     try {
       await this.follows.insertOne(newFollow);
-      return {}; // Success
+      return {}; // Success: Relationship created
     } catch (e) {
-      // In case of a race condition leading to a duplicate key error, catch and report.
+      // Catch potential race conditions where another `follow` operation for the same pair
+      // might have succeeded right before `findOne` completed. The unique index will prevent it.
       if (e instanceof Error && e.message.includes("duplicate key error")) {
         return {
           error: `User ${follower} is already following user ${followee}.`,
@@ -102,8 +103,10 @@ export default class FollowingConcept {
   /**
    * unfollow (follower: User, followee: User)
    *
-   * requires: A Follows(follower, followee) relationship must exist.
-   * effects: delete the existing Follows(follower, followee) entry from the state.
+   * requires:
+   *   - A Follows(follower, followee) relationship must exist in the state.
+   * effects:
+   *   - delete the existing Follows(follower, followee) entry from the state.
    */
   async unfollow({
     follower,
@@ -112,25 +115,25 @@ export default class FollowingConcept {
     follower: User;
     followee: User;
   }): Promise<Empty | { error: string }> {
-    // Precondition: Check if the relationship exists by attempting to delete it.
-    // MongoDB's deleteOne operation returns `deletedCount`.
+    // Effects: Attempt to delete the follow relationship.
+    // The `deletedCount` will tell us if a matching document was found and removed.
     const result = await this.follows.deleteOne({ follower, followee });
 
-    // If no document was deleted, the relationship didn't exist.
+    // Precondition check: If no document was deleted, the relationship didn't exist.
     if (result.deletedCount === 0) {
       return { error: `User ${follower} is not following user ${followee}.` };
     }
 
-    // Effects: The follow relationship has been successfully deleted.
-    return {}; // Success
+    return {}; // Success: Relationship deleted
   }
 
   // --- Queries (for internal use, testing, and application boundary syncs) ---
 
   /**
-   * _getFollows (follower: User, followee: User)
+   * _getFollows (follower: User, followee: User) : (follow: FollowsDoc)
    *
-   * effects: Returns the Follows document if the specified relationship exists, otherwise null.
+   * effects: Returns an array containing the Follows document if the specified relationship exists,
+   *          otherwise an empty array.
    */
   async _getFollows({
     follower,
@@ -138,39 +141,43 @@ export default class FollowingConcept {
   }: {
     follower: User;
     followee: User;
-  }): Promise<FollowsDoc | null> {
-    return this.follows.findOne({ follower, followee });
+  }): Promise<{ follow: FollowsDoc }[]> { // Changed return type to array of named dictionaries
+    const doc = await this.follows.findOne({ follower, followee });
+    return doc ? [{ follow: doc }] : []; // Wrap in array and named field
   }
 
   /**
-   * _getFollowers (user: User)
+   * _getFollowers (user: User) : (follower: User)
    *
-   * effects: Returns a list of Users who are following the given `user`.
+   * effects: Returns an array of dictionaries, each containing the ID of a User who is following the given `user`.
    */
-  async _getFollowers({ user }: { user: User }): Promise<User[]> {
-    const rows = await this.follows
-      .find({ followee: user }, { projection: { follower: 1, _id: 0 } })
+  async _getFollowers({ user }: { user: User }): Promise<{ follower: User }[]> { // Changed return type to array of named dictionaries
+    const followers = await this.follows
+      .find({ followee: user })
+      .project<Pick<FollowsDoc, "follower">>({ follower: 1, _id: 0 }) // Only return the follower ID
       .toArray();
-    return rows.map((r) => r.follower);
+    return followers.map((f) => ({ follower: f.follower })); // Map to array of named dictionaries
   }
 
   /**
-   * _getFollowees (user: User)
+   * _getFollowees (user: User) : (followee: User)
    *
-   * effects: Returns a list of Users whom the given `user` is following.
+   * effects: Returns an array of dictionaries, each containing the ID of a User whom the given `user` is following.
    */
-  async _getFollowees({ user }: { user: User }): Promise<User[]> {
-    const rows = await this.follows
-      .find({ follower: user }, { projection: { followee: 1, _id: 0 } })
+  async _getFollowees({ user }: { user: User }): Promise<{ followee: User }[]> { // Changed return type to array of named dictionaries
+    const followees = await this.follows
+      .find({ follower: user })
+      .project<Pick<FollowsDoc, "followee">>({ followee: 1, _id: 0 }) // Only return the followee ID
       .toArray();
-    return rows.map((r) => r.followee);
+    return followees.map((f) => ({ followee: f.followee })); // Map to array of named dictionaries
   }
 
   /**
-   * _areFriends (userA: User, userB: User)
+   * _areFriends (userA: User, userB: User) : (areFriends: boolean)
    *
-   * effects: Returns `true` if `userA` follows `userB` AND `userB` follows `userA` (mutual follow),
-   *          thereby fulfilling the "friends" principle of the concept. Otherwise, returns `false`.
+   * effects: Returns an array containing a single dictionary with `areFriends: true` if `userA` follows `userB`
+   *          AND `userB` follows `userA` (mutual follow). Otherwise, returns an array with `areFriends: false`.
+   *          A user is generally not considered "friends" with themselves in this context.
    */
   async _areFriends({
     userA,
@@ -178,10 +185,10 @@ export default class FollowingConcept {
   }: {
     userA: User;
     userB: User;
-  }): Promise<boolean> {
-    // A user cannot be friends with themselves in this context, though the definition still holds.
+  }): Promise<{ areFriends: boolean }[]> { // Changed return type to array of named dictionaries
+    // A user cannot be friends with themselves in this context, as friendship implies distinct entities.
     if (userA === userB) {
-      return false; // Or true, depending on exact application logic for "self-friendship". Sticking to mutual follow implies two distinct entities.
+      return [{ areFriends: false }]; // Wrap the boolean in an array and a named dictionary field
     }
 
     // Check if userA follows userB
@@ -196,7 +203,6 @@ export default class FollowingConcept {
       followee: userA,
     });
 
-    // If both relationships exist, they are friends.
-    return !!(followAtoB && followBtoA);
+    return [{ areFriends: !!(followAtoB && followBtoA) }]; // Wrap the boolean
   }
 }

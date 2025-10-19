@@ -2,6 +2,7 @@
 
 ## Output of running tests:
 
+running 5 tests from ./src/concepts/UserPreferences/UserPreferencesConcept.test.ts
 Operational principle: Add a preference and verify ...
 ------- output -------
 
@@ -11,24 +12,16 @@ Result: {}
 Query: _getPreferencesForUser(user:Alice) -> ["tag:impressionist"]
 Query: _getUsersByPreferenceTag(tag:impressionist) -> ["user:Alice"]
 ----- output end -----
-Operational principle: Add a preference and verify ... ok (716ms)
-Scenario 1: Attempt to add a preference for a non-existent tag ...
-------- output -------
-
---- Test: Add Preference with Non-Existent Tag ---
-Action: addPreference(user:Alice, tag:nonexistent)
-Result: {"error":"Tag 'tag:nonexistent' does not exist in the list of preset tags."}
------ output end -----
-Scenario 1: Attempt to add a preference for a non-existent tag ... ok (702ms)
-Scenario 2: Attempt to add an existing preference (duplicate) ...
+Operational principle: Add a preference and verify ... ok (801ms)
+Scenario 1: Attempt to add an existing preference (duplicate) ...
 ------- output -------
 
 --- Test: Add Duplicate Preference ---
 Action: addPreference(user:Alice, tag:impressionist)
 Result: {"error":"User 'user:Alice' already has a preference for tag 'tag:impressionist'."}
 ----- output end -----
-Scenario 2: Attempt to add an existing preference (duplicate) ... ok (726ms)
-Scenario 3: Add multiple distinct preferences for a user ...
+Scenario 1: Attempt to add an existing preference (duplicate) ... ok (558ms)
+Scenario 2: Add multiple distinct preferences for a user ...
 ------- output -------
 
 --- Test: Add Multiple Preferences ---
@@ -40,8 +33,8 @@ Query: _getPreferencesForUser(user:Alice) -> ["tag:modern","tag:photography","ta
 Query: _getPreferencesForUser(user:Bob) -> ["tag:modern","tag:sculpture"]
 Query: _getUsersByPreferenceTag(tag:modern) -> ["user:Alice","user:Bob"]
 ----- output end -----
-Scenario 3: Add multiple distinct preferences for a user ... ok (1s)
-Scenario 4: Remove an existing preference ...
+Scenario 2: Add multiple distinct preferences for a user ... ok (801ms)
+Scenario 3: Remove an existing preference ...
 ------- output -------
 
 --- Test: Remove Existing Preference ---
@@ -50,21 +43,14 @@ Result: {}
 Query: _getPreferencesForUser(user:Alice) -> ["tag:impressionist","tag:photography"]
 Query: _getUsersByPreferenceTag(tag:modern) -> ["user:Bob"]
 ----- output end -----
-Scenario 4: Remove an existing preference ... ok (974ms)
-Scenario 5: Attempt to remove a non-existent preference ...
+Scenario 3: Remove an existing preference ... ok (836ms)
+Scenario 4: Attempt to remove a non-existent preference ...
 ------- output -------
 
 --- Test: Remove Non-Existent Preference ---
 Action: removePreference(user:Alice, tag:sculpture)
 Result: {"error":"No preference found for user 'user:Alice' and tag 'tag:sculpture'."}
 ----- output end -----
-Scenario 5: Attempt to remove a non-existent preference ... ok (809ms)
-Scenario 6: Verify _getPresetTags query ...
-------- output -------
+Scenario 4: Attempt to remove a non-existent preference ... ok (639ms)
 
---- Test: _getPresetTags Query ---
-Query: _getPresetTags() -> [{"_id":"tag:impressionist","name":"Impressionist"},{"_id":"tag:modern","name":"Modern"},{"_id":"tag:photography","name":"Photography"},{"_id":"tag:sculpture","name":"Sculpture"}]
------ output end -----
-Scenario 6: Verify _getPresetTags query ... ok (619ms)
-
-ok | 7 passed | 0 failed (5s)
+ok | 5 passed | 0 failed (3s)

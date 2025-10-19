@@ -15,46 +15,40 @@ Your tests should cover the basic behavior of the concept but should also includ
 # file: src/UserPreferences/UserPreferencesConcept.test.ts
 
 ```typescript
+// src/UserPreferences/UserPreferencesConcept.test.ts
 import {
   assertEquals,
   assertObjectMatch,
-  assertRejects,
+  // assertRejects, // assertRejects is no longer strictly needed as concept returns errors as objects.
 } from "jsr:@std/assert";
 import { testDb } from "@utils/database.ts";
 import UserPreferencesConcept from "./UserPreferencesConcept.ts";
 import { ID } from "@utils/types.ts";
-import type { Db } from "npm:mongodb";
+// Removed: import type { Db } from "npm:mongodb";
 
 // ----- shared literals used in every test -----
 const userAlice = "user:Alice" as ID;
 const userBob = "user:Bob" as ID;
+// These tags are now *assumed* to be valid IDs by the UserPreferences concept itself.
+// Their actual existence and validity would be checked by an external synchronization layer.
 const tagImpressionist = "tag:impressionist" as ID;
 const tagModern = "tag:modern" as ID;
 const tagPhotography = "tag:photography" as ID;
 const tagSculpture = "tag:sculpture" as ID;
+
+// The concept no longer validates tag existence, so this ID will be treated like any other.
+// Validation for its 'existence' would be external.
 const nonExistentTag = "tag:nonexistent" as ID;
 
-type Tag = ID;
-interface PresetTagDoc {
-  _id: Tag;
-  name: string;
-}
+// REMOVED: PresetTagDoc interface and seedPresetTags function.
+// The UserPreferences concept no longer manages PresetTags or requires seeding them internally.
 
-async function seedPresetTags(db: Db) {
-  await db.collection<PresetTagDoc>("UserPreferences.presetTags").insertMany([
-    { _id: tagImpressionist, name: "Impressionist" },
-    { _id: tagModern, name: "Modern" },
-    { _id: tagPhotography, name: "Photography" },
-    { _id: tagSculpture, name: "Sculpture" },
-  ]);
-}
-
-// --- Test 1: Operational principle ---
+// --- Test 1: Operational principle (Add a preference and verify) ---
+// This test remains valid as it covers the core functionality of adding a preference.
 Deno.test("Operational principle: Add a preference and verify", async () => {
   const [db, client] = await testDb();
   const concept = new UserPreferencesConcept(db);
   try {
-    await seedPresetTags(db);
     console.log(`\n--- Test: Operational Principle ---`);
     console.log(`Action: addPreference(${userAlice}, ${tagImpressionist})`);
     const result = await concept.addPreference({
@@ -94,42 +88,17 @@ Deno.test("Operational principle: Add a preference and verify", async () => {
   }
 });
 
-// --- Test 2: Non-existent tag ---
-Deno.test("Scenario 1: Attempt to add a preference for a non-existent tag", async () => {
+// REMOVED: Test for "Attempt to add a preference for a non-existent tag" (Original Scenario 1).
+// This validation is now external to the UserPreferences concept.
+// If we were to include it, the concept's action would *succeed* in adding it, as it no longer validates tag existence.
+
+// --- Test 2: Attempt to add an existing preference (duplicate) ---
+// Renumbered from Scenario 2. This test remains valid as it checks the concept's internal "not present" precondition.
+Deno.test("Scenario 1: Attempt to add an existing preference (duplicate)", async () => {
   const [db, client] = await testDb();
   const concept = new UserPreferencesConcept(db);
   try {
-    await seedPresetTags(db);
-    console.log(`\n--- Test: Add Preference with Non-Existent Tag ---`);
-    console.log(`Action: addPreference(${userAlice}, ${nonExistentTag})`);
-    const result = await concept.addPreference({
-      user: userAlice,
-      tag: nonExistentTag,
-    });
-    assertObjectMatch(result, {
-      error:
-        `Tag '${nonExistentTag}' does not exist in the list of preset tags.`,
-    });
-    console.log(`Result: ${JSON.stringify(result)}`);
-
-    const preferences = await concept._getPreferencesForUser(userAlice);
-    assertEquals(
-      preferences.length,
-      0, // no prior successful add in this independent test
-      "Alice should still only have 0 preferences.",
-    );
-  } finally {
-    await client.close();
-  }
-});
-
-// --- Test 3: Duplicate preference ---
-Deno.test("Scenario 2: Attempt to add an existing preference (duplicate)", async () => {
-  const [db, client] = await testDb();
-  const concept = new UserPreferencesConcept(db);
-  try {
-    await seedPresetTags(db);
-    // setup to create the first preference so the second is a duplicate
+    // Setup: create the first preference so the second is a duplicate
     await concept.addPreference({ user: userAlice, tag: tagImpressionist });
 
     console.log(`\n--- Test: Add Duplicate Preference ---`);
@@ -155,12 +124,12 @@ Deno.test("Scenario 2: Attempt to add an existing preference (duplicate)", async
   }
 });
 
-// --- Test 4: Multiple adds ---
-Deno.test("Scenario 3: Add multiple distinct preferences for a user", async () => {
+// --- Test 3: Add multiple distinct preferences for a user ---
+// Renumbered from Scenario 3. This test remains valid, covering multiple adds and query checks.
+Deno.test("Scenario 2: Add multiple distinct preferences for a user", async () => {
   const [db, client] = await testDb();
   const concept = new UserPreferencesConcept(db);
   try {
-    await seedPresetTags(db);
     console.log(`\n--- Test: Add Multiple Preferences ---`);
     console.log(`Action: addPreference(${userAlice}, ${tagModern})`);
     await concept.addPreference({ user: userAlice, tag: tagModern });
@@ -217,13 +186,13 @@ Deno.test("Scenario 3: Add multiple distinct preferences for a user", async () =
   }
 });
 
-// --- Test 5: Remove existing ---
-Deno.test("Scenario 4: Remove an existing preference", async () => {
+// --- Test 4: Remove an existing preference ---
+// Renumbered from Scenario 4. This test remains valid.
+Deno.test("Scenario 3: Remove an existing preference", async () => {
   const [db, client] = await testDb();
   const concept = new UserPreferencesConcept(db);
   try {
-    await seedPresetTags(db);
-    // setup: give Alice three prefs so removing one leaves two
+    // Setup: give Alice three prefs so removing one leaves two
     await concept.addPreference({ user: userAlice, tag: tagImpressionist });
     await concept.addPreference({ user: userAlice, tag: tagModern });
     await concept.addPreference({ user: userAlice, tag: tagPhotography });
@@ -266,13 +235,13 @@ Deno.test("Scenario 4: Remove an existing preference", async () => {
   }
 });
 
-// --- Test 6: Remove non-existent ---
-Deno.test("Scenario 5: Attempt to remove a non-existent preference", async () => {
+// --- Test 5: Attempt to remove a non-existent preference ---
+// Renumbered from Scenario 5. This test remains valid as it checks the concept's internal "exists" precondition.
+Deno.test("Scenario 4: Attempt to remove a non-existent preference", async () => {
   const [db, client] = await testDb();
   const concept = new UserPreferencesConcept(db);
   try {
-    await seedPresetTags(db);
-    // setup: Alice has two prefs, not Sculpture
+    // Setup: Alice has two prefs, but not Sculpture
     await concept.addPreference({ user: userAlice, tag: tagImpressionist });
     await concept.addPreference({ user: userAlice, tag: tagPhotography });
 
@@ -299,25 +268,8 @@ Deno.test("Scenario 5: Attempt to remove a non-existent preference", async () =>
   }
 });
 
-// --- Test 7: _getPresetTags ---
-Deno.test("Scenario 6: Verify _getPresetTags query", async () => {
-  const [db, client] = await testDb();
-  const concept = new UserPreferencesConcept(db);
-  try {
-    await seedPresetTags(db);
-    console.log(`\n--- Test: _getPresetTags Query ---`);
-    const presetTags = await concept._getPresetTags();
-    console.log(`Query: _getPresetTags() -> ${JSON.stringify(presetTags)}`);
-    assertEquals(presetTags.length, 4, "Should retrieve all 4 preset tags.");
-    assertEquals(
-      presetTags.map((tag) => tag._id).sort(),
-      [tagImpressionist, tagModern, tagPhotography, tagSculpture].sort(),
-      "Should retrieve correct preset tag IDs.",
-    );
-  } finally {
-    await client.close();
-  }
-});
+// REMOVED: Test for "_getPresetTags query" (Original Scenario 6/7).
+// This query is no longer part of the concept.
 
 ```
 
