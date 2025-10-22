@@ -1,3 +1,12 @@
+---
+timestamp: 'Tue Oct 21 2025 12:05:18 GMT-0400 (Eastern Daylight Time)'
+parent: '[[../20251021_120518.1ade212f.md]]'
+content_id: 3f66225fcf2b5148983bc27c29986988a928597b29dd79407125d4e24d3aa83b
+---
+
+# file: src/concepts/Following/FollowingConcept.ts
+
+```typescript
 import { Collection, Db } from "npm:mongodb";
 import { Empty, ID } from "../../utils/types.ts"; // Adjust path as per your project structure
 import { freshID } from "../../utils/database.ts"; // Adjust path as per your project structure
@@ -62,17 +71,6 @@ export default class FollowingConcept {
     // Precondition check: follower cannot follow themselves
     if (follower === followee) {
       return { error: "A user cannot follow themselves." };
-    }
-
-    // Precondition check: both users must exist in UserAuthentication.credentials
-    const usersColl = this.db.collection("UserAuthentication.credentials");
-    const followerDoc = await usersColl.findOne({ _id: follower });
-    if (!followerDoc) {
-      return { error: `Follower user ${follower} does not exist.` };
-    }
-    const followeeDoc = await usersColl.findOne({ _id: followee });
-    if (!followeeDoc) {
-      return { error: `Followee user ${followee} does not exist.` };
     }
 
     // Precondition check: no Follows(follower, followee) currently exists.
@@ -184,30 +182,6 @@ export default class FollowingConcept {
   }
 
   /**
-   * _getUserIdByUsername (username: string) : (user: User)
-   *
-   * effects: Looks up `UserAuthentication.credentials` for the given `username` and
-   * returns an array containing `{ user }` if found, otherwise an empty array.
-   */
-  async _getUserIdByUsername({ username }: { username: string }): Promise<{ user: User }[]> {
-    const usersColl = this.db.collection("UserAuthentication.credentials");
-    const cred = await usersColl.findOne({ username });
-    return cred ? [{ user: (cred._id as unknown) as User }] : [];
-  }
-
-  /**
-   * _getUsernameByUserId (user: User) : (username: string)
-   *
-   * effects: Looks up `UserAuthentication.credentials` for the given `user` id and
-   * returns an array containing `{ username }` if found, otherwise an empty array.
-   */
-  async _getUsernameByUserId({ user }: { user: User }): Promise<{ username: string }[]> {
-    const usersColl = this.db.collection("UserAuthentication.credentials");
-    const cred = await usersColl.findOne({ _id: user });
-    return cred ? [{ username: (cred.username as string) }] : [];
-  }
-
-  /**
    * _areFriends (userA: User, userB: User) : (areFriends: boolean)
    *
    * effects: Returns an array containing a single dictionary with `areFriends: true` if `userA` follows `userB`
@@ -241,3 +215,52 @@ export default class FollowingConcept {
     return [{ areFriends: !!(followAtoB && followBtoA) }]; // Wrap the boolean
   }
 }
+
+```
+
+## Reviewing
+
+Specification:
+
+## concept **Reviewing** \[User, Item]
+
+**purpose**\
+record normalized per-item opinion (1–5 stars) with optional note
+
+**principle**\
+if **Reviews(user, item)** exists, then it is the single source of truth for that user’s rating of that item; subsequent upserts overwrite the prior rating and update the timestamp.
+
+**state**\
+a set of **Reviews** with
+
+* a user **User**
+* an item **ItemId**
+* a stars **STARS\_1 | STARS\_2 | STARS\_3 | STARS\_4 | STARS\_5**
+* an optional note **String**
+* an updatedAt **DateTime**
+
+**actions**\
+**upsertReview**(user: User, item: ItemId, stars: STARS\_1..STARS\_5, note?: String) : Empty | { error: String }
+
+* requires user exists
+* effects if **Reviews(user, item)** exists, update stars and note (if provided); otherwise create it; set `updatedAt := now`
+
+**clearReview**(user: User, item: ItemId) : Empty | { error: String }
+
+* requires **Reviews(user, item)** exists
+* effects delete that **Reviews**
+
+**queries**\
+**Review?**(user: User, item: ItemId) : (review: Review)
+
+* effects return the review for `(user, item)` if it exists
+
+**ReviewsByUser**(user: User) : (review: Review)
+
+* effects return every review authored by `user`
+
+**ReviewsByItem**(item: ItemId) : (review: Review)
+
+* effects return every review recorded for `item`
+
+Code:
