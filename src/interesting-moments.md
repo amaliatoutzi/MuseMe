@@ -19,3 +19,18 @@
 - **Simpler museum catalog wiring** — Context recommended resolving an absolute path and running an async loader before validating IDs, but importing the JSON once and populating sets inline kept my concepts lighter. I found this interesting as it came up with a really complex way to implement this, whereas I thought the solution was more straightforward.
   * [loader suggestion](../context/design/concepts/Reviewing/testing.md/steps/response.731a4777.md)
   * [lean import](../src/concepts/Similarity/SimilarityConcept.ts)
+
+# Changes part of 4b
+
+I ended up editing the design quite a bit compared to my sketches.
+
+- Firstly, I realized it is a web app and not a mobile app so I moved the menu to the top.
+- I also added a map feature that lets you see pins of museums on a map and select a pin.
+- Also, Ι added a search bar that lets you follow users and unfollow, but also look up museums.
+- Moreover, I changed the layout of the profile page so that it is simpler (now you can choose between preferences, saved, and reviews instead of endlessly scrolling.)
+- After my visual design study, I edited the colors to fit the theme more (so darker colors) with burgundy and gold accents. I also changed the font to fit the theme of old and elegant.
+- Another change I introduced was saving insetad of favoriting. This narrows down the scope of the feature: it is not the musuems you love most, but rather the ones you want to save for later.
+- Also, previously I allowed users to decide if they want their posts to be public or friends only, but I realized that this is not the goal of the app. The app is meant to serve as a diary and so I decided to keep it as friends only (the goal is not "social media" but rather to reduce decision fatigue).
+- Another design change I made was to keep a universal scale of stars instead of stars and LIKE, MEH, LOVE. This makes the design consistent regardless of whether we are talking about museums or exhibits.
+- I also decided to only recommend museums (not exhibits), so as to simplify the goal of my app. It still achieves its goal of reducing decision fatigue, so I do not think this is a major change.
+- Finally, I added a help button at the bottom in case a user wants a quick "tour" of the app.
