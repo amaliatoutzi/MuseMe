@@ -56,7 +56,8 @@ interface VisitEntry {
   visit: VisitId; // Reference to the parent Visit
   exhibit: ExhibitId;
   note?: string;
-  photoUrl?: string;
+  photoUrls?: string[];
+  rating?: number;
   loggedAt: Date;
   updatedAt: Date;
 }
@@ -125,16 +126,17 @@ export default class VisitConcept {
   }
 
   /**
-   * addEntry(visit: VisitId, exhibit: ExhibitId, note?: String, photoUrl?: String, user: User) : Empty | { error: String }
+   * addEntry(visit: VisitId, exhibit: ExhibitId, note?: String, photoUrls?: [String], rating?: Number, user: User) : Empty | { error: String }
    * requires: Visits[visit] exists, user = Visits[visit].owner, and exhibit belongs to Visits[visit].museum
-   * effects: create VisitEntries(visit, exhibit, note?, photoUrl?, loggedAt := now, updatedAt := now); set Visits[visit].updatedAt := now; returns error if exhibit already logged for this visit.
+   * effects: create VisitEntries(visit, exhibit, note?, photoUrls? := [], rating?, loggedAt := now, updatedAt := now); set Visits[visit].updatedAt := now; returns error if exhibit already logged for this visit.
    */
   async addEntry(
-    { visit: visitId, exhibit, note, photoUrl, user }: {
+    { visit: visitId, exhibit, note, photoUrls, rating, user }: {
       visit: VisitId;
       exhibit: ExhibitId;
       note?: string;
-      photoUrl?: string;
+      photoUrls?: string[];
+      rating?: number;
       user: User;
     },
   ): Promise<Empty | { error: string }> {
@@ -176,7 +178,8 @@ export default class VisitConcept {
       visit: visitId,
       exhibit,
       note,
-      photoUrl,
+      photoUrls: photoUrls ?? [],
+      rating,
       loggedAt: now,
       updatedAt: now,
     };
@@ -196,15 +199,16 @@ export default class VisitConcept {
   }
 
   /**
-   * editEntry(visitEntryId: VisitEntryId, note?: String, photoUrl?: String, user: User) : Empty | { error: String }
+   * editEntry(visitEntryId: VisitEntryId, note?: String, photoUrls?: [String], rating?: Number, user: User) : Empty | { error: String }
    * requires: entry exists and user = entry.visit.owner
    * effects: update provided fields; set entry.updatedAt := now; set entry.visit.updatedAt := now
    */
   async editEntry(
-    { visitEntryId, note, photoUrl, user }: {
+    { visitEntryId, note, photoUrls, rating, user }: {
       visitEntryId: VisitEntryId;
       note?: string;
-      photoUrl?: string;
+      photoUrls?: string[];
+      rating?: number;
       user: User;
     },
   ): Promise<Empty | { error: string }> {
@@ -231,7 +235,8 @@ export default class VisitConcept {
       updatedAt: now,
     };
     if (note !== undefined) updateFields.note = note;
-    if (photoUrl !== undefined) updateFields.photoUrl = photoUrl;
+    if (photoUrls !== undefined) updateFields.photoUrls = photoUrls;
+    if (rating !== undefined) updateFields.rating = rating;
 
     try {
       // Effects: update provided fields; set entry.updatedAt := now

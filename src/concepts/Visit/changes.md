@@ -6,6 +6,8 @@
 - Narrowed the action surface to match the new spec: removed tag/visibility setters and star ratings, and standardized on `createVisit`, `addEntry`, `editEntry`, and `removeEntry` that always verify ownership, ensure exhibits belong to the visit’s museum, and bump the parent visit’s `updatedAt`.
 - Updated return shapes: `createVisit` now yields `{ visitId }` (or `{ error }`), while the entry mutations return `Empty | { error: string }`
 - Added concept-aligned queries `_getVisit`, `_getVisitsByUser`, `_getEntriesByVisit`, and `_getEntry`
+- I ended up editing the concept to allow an array of photo URLs so that users can upload 0 or more URLs for each exhibit.
+- So far I had been saving exhibit rating inside the optional note. However, I ended up adding an optional rating in the state, so that I can store and manipulate it separately.
 
 ## Issues encountered
 
