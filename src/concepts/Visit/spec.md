@@ -1,7 +1,7 @@
 ## concept **Visit** [User, MuseumId, ExhibitId, VisitEntryId]
 
 **purpose**
-capture a user’s personal diary of a museum visit, including the list of exhibits seen, each with optional note and photo
+capture a user’s personal diary of a museum visit, including the list of exhibits seen, each with optional note and photos
 
 **principle**
 when a user logs a museum visit and records the exhibits they saw (with optional notes/photos), the visit becomes an editable diary entry owned by that user.
@@ -19,7 +19,8 @@ a set of **VisitEntries** with
 - a visit **VisitId**
 - an exhibit **ExhibitId**
 - an optional note **String**
-- an optional photoUrl **String**
+- optional photoUrls **[String]**
+- optional rating **Number**
 - a loggedAt **DateTime**
 - an updatedAt **DateTime**
 
@@ -28,11 +29,11 @@ a set of **VisitEntries** with
 - requires owner exists and museum exists
 - effects create **Visit(visitId, owner, museum, title?)**; set `createdAt := now`, `updatedAt := now`
 
-**addEntry**(visit: VisitId, exhibit: ExhibitId, note?: String, photoUrl?: String, user: User) : Empty | { error: String }
+**addEntry**(visit: VisitId, exhibit: ExhibitId, note?: String, photoUrls?: [String], rating?: Number, user: User) : Empty | { error: String }
 - requires **Visits\[visit]** exists, `user = Visits[visit].owner`, and exhibit belongs to **Visits\[visit].museum**
-- effects create **VisitEntries(visitEntryId, visit, exhibit, note?, photoUrl?, loggedAt := now, updatedAt := now)**; set **Visits[visit].updatedAt := now**; returns error if exhibit already logged for this visit
+- effects create **VisitEntries(visitEntryId, visit, exhibit, note?, photoUrls? := [], rating?, loggedAt := now, updatedAt := now)**; set **Visits[visit].updatedAt := now**;
 
-**editEntry**(visitEntryId: VisitEntryId, note?: String, photoUrl?: String, user: User) : Empty | { error: String }
+**editEntry**(visitEntryId: VisitEntryId, note?: String, photoUrls?: [String], rating?: Number, user: User) : Empty | { error: String }
 - requires entry exists and `user = entry.visit.owner`
 - effects update provided fields; set **VisitEntries[visitEntryId].updatedAt := now**; set **Visits[entry.visit].updatedAt := now**
 

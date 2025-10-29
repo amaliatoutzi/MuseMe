@@ -62,7 +62,8 @@ Deno.test("1. Operational Principle: Log a museum visit with entries", async () 
       visit: aliceVisitId,
       exhibit: egyptianArtExhibit,
       note: "Loved the Temple of Dendur!",
-      photoUrl: "http://example.com/egyptian-art.jpg",
+      photoUrls: ["http://example.com/egyptian-art.jpg"],
+      rating: 5,
       user: userAlice,
     });
     assertExists(addEntryResult1, "addEntry should return a result");
@@ -82,7 +83,8 @@ Deno.test("1. Operational Principle: Log a museum visit with entries", async () 
       visit: aliceVisitId,
       exhibit: egyptianArtExhibit,
       note: "Loved the Temple of Dendur!",
-      photoUrl: "http://example.com/egyptian-art.jpg",
+      photoUrls: ["http://example.com/egyptian-art.jpg"],
+      rating: 5,
     });
     egyptianArtEntryId = entries1[0]._id;
     const updatedVisit1 = await visitConcept._getVisit({
@@ -285,7 +287,7 @@ Deno.test("3. Scenario: Invalid addEntry attempts", async () => {
     // Test: Duplicate exhibit entry
     console.log("Attempting to add a duplicate exhibit entry.");
 
-    const result = await visitConcept.addEntry({
+    const _result = await visitConcept.addEntry({
       visit: aliceVisitId,
       exhibit: egyptianArtExhibit,
       user: userAlice,
@@ -382,7 +384,8 @@ Deno.test("4. Scenario: Edit and Remove Visit Entry", async () => {
     const editResult = await visitConcept.editEntry({
       visitEntryId: armsAndArmorEntryId,
       note: "Actually, it was absolutely fascinating!",
-      photoUrl: "http://example.com/arms-and-armor-edited.jpg",
+      photoUrls: ["http://example.com/arms-and-armor-edited.jpg"],
+      rating: 4,
       user: userAlice,
     });
     assertExists(editResult, "editEntry should return a result");
@@ -399,10 +402,10 @@ Deno.test("4. Scenario: Edit and Remove Visit Entry", async () => {
     });
     assertExists(editedEntry, "Edited entry should still exist");
     assertEquals(editedEntry.note, "Actually, it was absolutely fascinating!");
-    assertEquals(
-      editedEntry.photoUrl,
+    assertEquals(editedEntry.photoUrls, [
       "http://example.com/arms-and-armor-edited.jpg",
-    );
+    ]);
+    assertEquals(editedEntry.rating, 4);
 
     const visitUpdatedAtAfterEdit =
       (await visitConcept._getVisit({ visitId: aliceVisitId }))?.updatedAt;
