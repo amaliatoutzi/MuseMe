@@ -1,84 +1,8 @@
-[@application-pitch](../../background/application-pitch.md)
-
-[@concept-design-overview](../../background/concept-design-overview.md)
-
-[@concept-specifications](../../background/concept-specifications.md)
-
-[@implementing-concepts](../../background/implementing-concepts.md)
-
-# implement: Saving
-
-# ROLE
-You are a senior TypeScript engineer implementing a small, self-contained domain module from a formal concept spec.
-
-# CONCEPT TO IMPLEMENT (authoritative spec; treat “principle” as operational behavior)
-## concept **Saving** [User, Item]
-
-**purpose**
-let a user mark/unmark any item to revisit later
-
-**principle**
-if **Saved(user, item)** exists, then that item should appear in the user’s saved list; removing it deletes the single source of truth for that saved state.
-
-**state**
-a set of **Saved** with
-- a user **User**
-- an item **ItemId**
-- a createdAt **DateTime**
-
-**actions**
-**saveItem**(user: User, item: ItemId) : Empty | { error: String }
-- requires user exists and **Saved(user, item)** not present
-- effects create **Saved(user, item, createdAt := now)**
-
-**unsaveItem**(user: User, item: ItemId) : Empty | { error: String }
-- requires **Saved(user, item)** exists
-- effects delete that **Saved**
-
-**queries**
-**ListSaved**(user: User, limit?: Number) : (item: ItemId)
-- requires user exists
-- effects return up to `limit` items saved by `user`, ordered by `createdAt` descending
-
-
-
-# Make edits:
-Check that the ID of item (museum or exhibit) are valid by ensuring they are in the file `new-york-museums.json` which is a database of all museums. This is an example of its format:
-
-```plaintext
-[
-  {
-    "id": "alice-austen-house-museum",
-    "name": "Alice Austen House Museum",
-    "address": "2 Hylan Boulevard",
-    "zip": "10305",
-    "borough": "Staten Island",
-    "location": {
-      "lat": 40.5975,
-      "lon": -74.0732
-    },
-    "website": "https://aliceausten.org/",
-    "tags": [
-      "Photography",
-      "History",
-      "American",
-      "Art"
-    ],
-    "exhibits": [
-      {
-        "id": "alice-austen-and-the-old-house",
-        "name": "Alice Austen and The Old House",
-        "type": "Permanent"
-      },
-      {
-        "id": "the-story-of-the-house",
-        "name": "The Story of the House",
-        "type": "Permanent"
-      }
-    ]
-  },
-]
-```
+---
+timestamp: 'Fri Nov 07 2025 23:28:48 GMT-0500 (Eastern Standard Time)'
+parent: '[[../20251107_232848.e392c054.md]]'
+content_id: 50ad767514f08771467ef841200645a7b1ace81388af97944c8610913fa5a06d
+---
 
 # response:
 
