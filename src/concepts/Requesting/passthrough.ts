@@ -101,5 +101,9 @@ export const exclusions: Array<string> = [
   "/api/Visit/createVisit",
   "/api/Visit/editEntry",
   "/api/Visit/removeEntry",
+  // Legacy granular update endpoints are excluded to avoid bypassing combined validation
+  "/api/Visit/updateEntryNote",
+  "/api/Visit/updateEntryPhotos",
+  "/api/Visit/updateEntryRating",
   // Removed enrichment endpoints (no longer supported; strict single addEntry)
 ];

@@ -1,36 +1,76 @@
-# Interesting Moments
+# Design Document — Final vs. Initial (A2) and Visual (A4b)
 
-- **Confirming preset tags belonged outside UserPreferences** — Running the confirmation workflow for UserPreferences (confirm.md) made it clear the concept should not manage preset tag state. Removing the extra collection simplified the concept and aligned it with the rubric’s independence requirement.
-  * [updated implementation](../context/design/concepts/UserPreferences/testing.md/steps/response.b66749f6.md)
-  * [suggestion](../context/design/concepts/UserPreferences/confirm.md/steps/response.cf8ce21d.md).
+## 1) Final Project Overview
 
-- **Query return contract enforced by Following confirm** — The Following confirm.md highlighted that my queries were returning single documents and booleans instead of arrays of named dictionaries, prompting a sweep across concepts to normalize query shapes. This was interesting since the background had clear instructions to only return arrays of dictionaries in queries.
-  * [suggestion about query returns](../context/design/concepts/Following/confirm.md/steps/response.90d546c8.md)
-- **Neighbors sort tie-break in Similarity** — Inspecting the Similarity confirm.md and looking at failed testcases surfaced that I was only sorting neighbors by score. adding a secondary sort on the neighbor ID stabilized deterministic outputs.
-  * [sorting concern](../context/design/concepts/Similarity/confirm.md/steps/response.c9a9deba.md)
-- **Test prompts unpredictably bundled implementations** — Multiple runs of the Visit testing prompt sometimes yielded only tests and other times returned the entire concept implementation alongside the tests, forcing manual pruning before committing. This was surprising as the prompt was not changed to make such an instruction.
-  * [tests snapshot](../context/design/concepts/Visit/testing.md/steps/file.3cc91aec.md)
-  * [mixed-output snapshot](../context/design/concepts/Visit/testing.md/steps/file.85071dd5.md)
-- **Assumed helpers and phantom museums in Saving tests** — The generated Saving tests imported a nonexistent `toID` helper and exercised IDs like `american-folk-art-museum`, which weren’t present in my catalog, so I rewrote those by hand.
-  * [toID method and phantom museums](../context/design/concepts/Saving/testing.md/steps/response.4c7cea59.md)
-- **Hallucinated Google data in museum catalog** — Early attempts to build the New York museum catalog invented ratings, review counts, and Google URLs that couldn’t be verified, so I stripped those fields and kept only data I could confirm. This was interesting as I had specifically instructed multiple times in the promopt to only use links that can be verified. I thnk the cause behind this was that the dates Context was listing were from 2024, so perhaps it was out of date. Still, the numbers did not add up as it listed for example 800 reviews when now there are 200.
-  * [hallucinated dataset](../context/design/database/new-york-museums.md/steps/response.30bbeef1.md)
-  * [sanitized revision](../context/design/database/new-york-museums.md/steps/response.3ad43cac.md)
-- **Simpler museum catalog wiring** — Context recommended resolving an absolute path and running an async loader before validating IDs, but importing the JSON once and populating sets inline kept my concepts lighter. I found this interesting as it came up with a really complex way to implement this, whereas I thought the solution was more straightforward.
-  * [loader suggestion](../context/design/concepts/Reviewing/testing.md/steps/response.731a4777.md)
-  * [lean import](../src/concepts/Similarity/SimilarityConcept.ts)
+* **Product:** Friends-only museum diary & discovery **web** app for NYC.
+* **Core loop:** Log a visit → rate (1–5 stars) → notes/photos → friends see it → **Save for later** shortlists → museum recommendation .
+---
 
-# Changes part of 4b
+## 2) What Changed From Assignment 2 (Initial Concept)
 
-I ended up editing the design quite a bit compared to my sketches.
+### Navigation & Layout
 
-- Firstly, I realized it is a web app and not a mobile app so I moved the menu to the top.
-- I also added a map feature that lets you see pins of museums on a map and select a pin.
-- Also, Ι added a search bar that lets you follow users and unfollow, but also look up museums.
-- Moreover, I changed the layout of the profile page so that it is simpler (now you can choose between preferences, saved, and reviews instead of endlessly scrolling.)
-- After my visual design study, I edited the colors to fit the theme more (so darker colors) with burgundy and gold accents. I also changed the font to fit the theme of old and elegant.
-- Another change I introduced was saving insetad of favoriting. This narrows down the scope of the feature: it is not the musuems you love most, but rather the ones you want to save for later.
-- Also, previously I allowed users to decide if they want their posts to be public or friends only, but I realized that this is not the goal of the app. The app is meant to serve as a diary and so I decided to keep it as friends only (the goal is not "social media" but rather to reduce decision fatigue).
-- Another design change I made was to keep a universal scale of stars instead of stars and LIKE, MEH, LOVE. This makes the design consistent regardless of whether we are talking about museums or exhibits.
-- I also decided to only recommend museums (not exhibits), so as to simplify the goal of my app. It still achieves its goal of reducing decision fatigue, so I do not think this is a major change.
-- Finally, I added a help button at the bottom in case a user wants a quick "tour" of the app.
+* **Mobile → Web shift:** Primary nav moved to a **top menu bar** (A2 assumed bottom tabs for mobile).
+* **Profile simplified:** From a long scroll to **Preferences / Saved / Reviews** tabs.
+
+### Features & Scope
+
+* **Map view:** Pins for museums; select to view details and actions.
+* **Unified search:** Single bar for **museums and users** (follow/unfollow).
+* **Save vs. Favorite:** Reframed as **“Save for later”** to reduce decision fatigue. I think the terms were creating misconceptions about their intended purpose.
+* **Unified ratings:** Replaced LIKE/MEH/LOVE with **1–5 stars** for consistency.
+* **Recs trimmed:** Recommend **museums only** to keep the task focused, instead of museums and exhibits.
+
+### Concept Model Adjustments (raised by confirmations)
+
+* **Keep preset tags outside `UserPreferences`:** Confirm workflow showed the concept shouldn’t manage preset tag state; removing the extra collection improved independence and grading alignment. Design-wise, this let me use the tags in different places (like recommendation and profile) without coupling.
+  ↳ [updated impl](../context/design/concepts/UserPreferences/testing.md/steps/response.b66749f6.md) · [confirm suggestion](../context/design/concepts/UserPreferences/confirm.md/steps/response.cf8ce21d.md)
+* **Normalize query return shapes:** Following’s confirm caught that some queries returned single docs/bools; standardized on **arrays of named dictionaries** across concepts. This allowed me to portray the following in my profile page on the front end.
+  ↳ [return-shape note](../context/design/concepts/Following/confirm.md/steps/response.90d546c8.md)
+
+---
+
+## 3) What Changed From Assignment 4b (Visual Design)
+
+### Visual System
+
+* **Color & type:** Darker theme with **burgundy + gold**; typography tuned for an **elegant** feel. This matches my design study.
+* **Branding:** Added a **favicon** with the app logo for the web app to be recognizable.
+* **OS highlight overrides:** Replaced default pink focus highlights with theme-consistent states. Ensures consistency and adds to the elegant and deep vibe.
+
+### Interaction & UX Polish
+
+* **Accessibility:** Higher contrast hovers (e.g., **burgundy bg + white text**), larger targets, clearer keyboard order.
+* **Micro-animations:** Subtle **“hop”** on Profile tabs to support orientation.
+* **Ratings affordance:** Stars **turn gold on hover** to guide precise selection and improve accessibility.
+* **Form trims:** Removed misleading **Preview** on Add Visit, as it did not really preview anything; **Photos required** to avoid empty feed cards (and make the app more consistent).
+* **Self-search guard:** Hide **Follow** when viewing your own profile. This was confusing as users would think they could follow themselves, which not only breaks the backend, but also does not make sense.
+* **Search hygiene:** Clear the search bar after submit to speed subsequent searches.
+
+### Data Loading
+
+* **Lean catalog loader:** Rejected a heavier async path-resolver/loader in favor of **simple JSON import + inline set population** for ID validation (smaller and easier to reason about). Initially, I was going to allow users like museum staff to update this, but the design was way too complex, so I chose this simpler and more focused approach.
+  ↳ [loader suggestion](../context/design/concepts/Reviewing/testing.md/steps/response.731a4777.md) · [lean import](../src/concepts/Similarity/SimilarityConcept.ts)
+
+---
+
+## 4) Data & Integrity Decisions (catalog and similarity)
+
+### Catalog Accuracy
+
+* **Removed hallucinated fields:** Early drafts invented ratings/reviews/URLs; final kept only **verifiable** fields and sources. I noticed this issue while looking at the design.
+  ↳ [hallucinated draft](../context/design/database/new-york-museums.md/steps/response.30bbeef1.md) · [sanitized revision](../context/design/database/new-york-museums.md/steps/response.3ad43cac.md)
+
+### Similarity & Determinism
+
+* **Stable neighbor ordering:** Added a **secondary sort by neighbor ID** to break score ties and make outputs reproducible. This issue showed up when developing the front end when the UI looked funky.
+  ↳ [tie-break note](../context/design/concepts/Similarity/confirm.md/steps/response.c9a9deba.md)
+
+---
+
+## 5) Why These Changes Helped
+
+* **Clarity over overload:** Friends-only + Save-for-later + museum-level recs focus decisions on planning visits.
+* **Consistency:** One rating scale; one search; simpler profile model; consistent colors → faster learning and fewer edge cases.
+* **Reliability:** Contracted query shapes, deterministic similarity, and vetted data reduce flakiness and non-reproducible bugs.
+* **Accessibility & polish:** Contrast, focus, empty states, and restrained animations improve comprehension and flow.
