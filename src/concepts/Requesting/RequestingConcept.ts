@@ -1,4 +1,5 @@
 import { Hono } from "jsr:@hono/hono";
+import type { Context } from "jsr:@hono/hono";
 import { cors } from "jsr:@hono/hono/cors";
 import { Collection, Db } from "npm:mongodb";
 import { freshID } from "@utils/database.ts";
@@ -226,7 +227,7 @@ export function startRequestingServer(
         ? `  -> ${route}`
         : `WARNING - UNVERIFIED ROUTE: ${route}`;
 
-      app.post(route, async (c) => {
+      app.post(route, async (c: Context) => {
         try {
           const body = await c.req.json().catch(() => ({})); // Handle empty body
           const result = await concept[method](body);
@@ -252,7 +253,7 @@ export function startRequestingServer(
    */
 
   const routePath = `${REQUESTING_BASE_URL}/*`;
-  app.post(routePath, async (c) => {
+  app.post(routePath, async (c: Context) => {
     try {
       const body = await c.req.json();
       if (typeof body !== "object" || body === null) {
@@ -267,8 +268,14 @@ export function startRequestingServer(
       const actionPath = c.req.path.substring(REQUESTING_BASE_URL.length);
 
       // Combine the path from the URL with the JSON body to form the action's input.
+      // If the client nests parameters under `payload`, flatten them into the top-level to
+      // support sync patterns that expect top-level symbols (e.g., { user }).
+      const payload = (body as Record<string, unknown>)?.payload;
+      const merged = (payload && typeof payload === "object")
+        ? { ...(payload as Record<string, unknown>), ...body }
+        : body;
       const inputs = {
-        ...body,
+        ...merged,
         path: actionPath,
       };
 

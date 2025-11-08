@@ -5,7 +5,7 @@ import {
   assertObjectMatch,
 } from "jsr:@std/assert";
 import { testDb } from "@utils/database.ts";
-import { Empty, ID } from "@utils/types.ts";
+import { ID } from "@utils/types.ts";
 import VisitConcept from "./VisitConcept.ts";
 
 const userAlice = "user:Alice" as ID;
@@ -19,8 +19,8 @@ const nonExistentExhibit = "non-existent-exhibit" as ID;
 
 // Store visitId and visitEntryIds for later tests
 let aliceVisitId: ID;
-let egyptianArtEntryId: ID;
-let europeanSculptureEntryId: ID;
+let _egyptianArtEntryId: ID;
+let _europeanSculptureEntryId: ID;
 
 Deno.test("1. Operational Principle: Log a museum visit with entries", async () => {
   const [db, client] = await testDb();
@@ -86,7 +86,7 @@ Deno.test("1. Operational Principle: Log a museum visit with entries", async () 
       photoUrls: ["http://example.com/egyptian-art.jpg"],
       rating: 5,
     });
-    egyptianArtEntryId = entries1[0]._id;
+    _egyptianArtEntryId = entries1[0]._id;
     const updatedVisit1 = await visitConcept._getVisit({
       visitId: aliceVisitId,
     });
@@ -104,6 +104,8 @@ Deno.test("1. Operational Principle: Log a museum visit with entries", async () 
       visit: aliceVisitId,
       exhibit: europeanSculptureExhibit,
       note: "Impressive collection of classical works.",
+      photoUrls: ["http://example.com/european-sculpture.jpg"],
+      rating: 4,
       user: userAlice,
     });
     assertExists(addEntryResult2, "addEntry should return a result");
@@ -136,7 +138,7 @@ Deno.test("1. Operational Principle: Log a museum visit with entries", async () 
       exhibit: europeanSculptureExhibit,
       note: "Impressive collection of classical works.",
     });
-    europeanSculptureEntryId = europeanSculptureEntry!._id;
+    _europeanSculptureEntryId = europeanSculptureEntry!._id;
     const updatedVisit2 = await visitConcept._getVisit({
       visitId: aliceVisitId,
     });
@@ -225,6 +227,9 @@ Deno.test("3. Scenario: Invalid addEntry attempts", async () => {
     const resultNonExistentVisit = await visitConcept.addEntry({
       visit: "non-existent-visit" as ID,
       exhibit: egyptianArtExhibit,
+      note: "x",
+      photoUrls: ["http://x"],
+      rating: 3,
       user: userAlice,
     });
     assertExists(
@@ -247,6 +252,9 @@ Deno.test("3. Scenario: Invalid addEntry attempts", async () => {
     const resultUnauthorized = await visitConcept.addEntry({
       visit: aliceVisitId,
       exhibit: armsAndArmorExhibit,
+      note: "x",
+      photoUrls: ["http://x"],
+      rating: 3,
       user: userBob, // Bob is not the owner
     });
     assertExists(
@@ -269,6 +277,9 @@ Deno.test("3. Scenario: Invalid addEntry attempts", async () => {
     const resultWrongExhibit = await visitConcept.addEntry({
       visit: aliceVisitId,
       exhibit: nonExistentExhibit, // Not a valid exhibit for The Met
+      note: "x",
+      photoUrls: ["http://x"],
+      rating: 3,
       user: userAlice,
     });
     assertExists(
@@ -290,12 +301,18 @@ Deno.test("3. Scenario: Invalid addEntry attempts", async () => {
     const _result = await visitConcept.addEntry({
       visit: aliceVisitId,
       exhibit: egyptianArtExhibit,
+      note: "x",
+      photoUrls: ["http://x"],
+      rating: 3,
       user: userAlice,
     });
 
     const resultDuplicate = await visitConcept.addEntry({
       visit: aliceVisitId,
       exhibit: egyptianArtExhibit, // Already added
+      note: "x",
+      photoUrls: ["http://x"],
+      rating: 3,
       user: userAlice,
     });
     assertExists(
@@ -315,7 +332,7 @@ Deno.test("3. Scenario: Invalid addEntry attempts", async () => {
   }
 });
 
-Deno.test("4. Scenario: Edit and Remove Visit Entry", async () => {
+Deno.test("4. Scenario: Cascade Remove Visit via Entry", async () => {
   const [db, client] = await testDb();
   const visitConcept = new VisitConcept(db);
 
@@ -333,11 +350,16 @@ Deno.test("4. Scenario: Edit and Remove Visit Entry", async () => {
       visit: aliceVisitId,
       exhibit: egyptianArtExhibit,
       note: "Initially liked it.",
+      photoUrls: ["http://example.com/egypt-init.jpg"],
+      rating: 5,
       user: userAlice,
     });
     await visitConcept.addEntry({
       visit: aliceVisitId,
       exhibit: europeanSculptureExhibit,
+      note: "Second hall",
+      photoUrls: ["http://example.com/euro-init.jpg"],
+      rating: 4,
       user: userAlice,
     });
 
@@ -347,6 +369,8 @@ Deno.test("4. Scenario: Edit and Remove Visit Entry", async () => {
       visit: aliceVisitId,
       exhibit: armsAndArmorExhibit,
       note: "Initially liked it.",
+      photoUrls: ["http://example.com/arms-init.jpg"],
+      rating: 4,
       user: userAlice,
     });
     assertExists(
@@ -375,46 +399,9 @@ Deno.test("4. Scenario: Edit and Remove Visit Entry", async () => {
     assertExists(armsAndArmorEntry, "Arms and Armor entry should exist");
     const armsAndArmorEntryId = armsAndArmorEntry!._id; // <-- correct ID, captured after creation
 
-    const visitUpdatedAtBeforeEdit =
-      (await visitConcept._getVisit({ visitId: aliceVisitId }))?.updatedAt;
     console.log("Arms and Armor entry added.");
 
-    // Edit that entry
-    console.log(`Editing entry ${armsAndArmorEntryId}.`);
-    const editResult = await visitConcept.editEntry({
-      visitEntryId: armsAndArmorEntryId,
-      note: "Actually, it was absolutely fascinating!",
-      photoUrls: ["http://example.com/arms-and-armor-edited.jpg"],
-      rating: 4,
-      user: userAlice,
-    });
-    assertExists(editResult, "editEntry should return a result");
-    assertEquals(
-      (editResult as { error: string }).error,
-      undefined,
-      "editEntry should succeed",
-    );
-    console.log("Entry edited.");
-
-    // Verify edit + updatedAt bump
-    const editedEntry = await visitConcept._getEntry({
-      visitEntryId: armsAndArmorEntryId,
-    });
-    assertExists(editedEntry, "Edited entry should still exist");
-    assertEquals(editedEntry.note, "Actually, it was absolutely fascinating!");
-    assertEquals(editedEntry.photoUrls, [
-      "http://example.com/arms-and-armor-edited.jpg",
-    ]);
-    assertEquals(editedEntry.rating, 4);
-
-    const visitUpdatedAtAfterEdit =
-      (await visitConcept._getVisit({ visitId: aliceVisitId }))?.updatedAt;
-    assertNotEquals(
-      visitUpdatedAtAfterEdit?.getTime(),
-      visitUpdatedAtBeforeEdit?.getTime(),
-      "Visit updatedAt should be updated after editing entry",
-    );
-    console.log("Edited entry verified, visit updatedAt updated.");
+    // Editing removed – skip edit step
 
     // Remove the same entry
     console.log(`Removing entry ${armsAndArmorEntryId}.`);
@@ -430,43 +417,33 @@ Deno.test("4. Scenario: Edit and Remove Visit Entry", async () => {
     );
     console.log("Entry removed.");
 
-    // Verify deletion + updatedAt bump
-    const removedEntry = await visitConcept._getEntry({
-      visitEntryId: armsAndArmorEntryId,
+    // Verify cascading deletion
+    const removedVisit = await visitConcept._getVisit({
+      visitId: aliceVisitId,
     });
     assertEquals(
-      removedEntry,
+      removedVisit,
       null,
-      "Entry should no longer exist after removal",
+      "Visit should be deleted after cascade remove",
     );
-
     const entriesAfterRemove = await visitConcept._getEntriesByVisit({
       visitId: aliceVisitId,
     });
     assertEquals(
       entriesAfterRemove.length,
-      2,
-      "There should be 2 entries after removal",
+      0,
+      "All entries deleted with visit",
     );
-
-    const visitUpdatedAtAfterRemove =
-      (await visitConcept._getVisit({ visitId: aliceVisitId }))?.updatedAt;
-    assertNotEquals(
-      visitUpdatedAtAfterRemove?.getTime(),
-      visitUpdatedAtAfterEdit?.getTime(),
-      "Visit updatedAt should be updated after removing entry",
-    );
-    console.log("Entry deletion verified, visit updatedAt updated.");
   } finally {
     await client.close();
   }
 });
 
-Deno.test("5. Scenario: Invalid editEntry/removeEntry attempts", async () => {
+Deno.test("5. Scenario: Invalid removeEntry attempts", async () => {
   const [db, client] = await testDb();
   const visitConcept = new VisitConcept(db);
   try {
-    console.log("\n--- Test 5: Invalid editEntry/removeEntry attempts ---");
+    console.log("\n--- Test 5: Invalid removeEntry attempts ---");
 
     // Setup: real entry owned by Alice
     const { visitId: aliceVisitId } = (await visitConcept.createVisit({
@@ -477,55 +454,16 @@ Deno.test("5. Scenario: Invalid editEntry/removeEntry attempts", async () => {
     await visitConcept.addEntry({
       visit: aliceVisitId,
       exhibit: egyptianArtExhibit,
+      note: "x",
+      photoUrls: ["http://x"],
+      rating: 3,
       user: userAlice,
     });
 
     const aliceEntry =
       (await visitConcept._getEntriesByVisit({ visitId: aliceVisitId }))[0]._id;
 
-    // Test: Non-existent entry for edit
-    console.log("Attempting to edit a non-existent entry.");
-    const resultEditNonExistent = await visitConcept.editEntry({
-      visitEntryId: "non-existent-entry" as ID,
-      note: "this should fail",
-      user: userAlice,
-    });
-    assertExists(
-      (resultEditNonExistent as { error: string }).error,
-      "editEntry should fail for non-existent entry",
-    );
-    assertEquals(
-      (resultEditNonExistent as { error: string }).error,
-      "Visit entry with ID 'non-existent-entry' not found.",
-      "Error message for non-existent entry (edit)",
-    );
-    console.log(
-      `Failed as expected: ${
-        (resultEditNonExistent as { error: string }).error
-      }`,
-    );
-
-    // Test: Unauthorized user for edit
-    console.log("Attempting to edit an entry by an unauthorized user.");
-    const resultEditUnauthorized = await visitConcept.editEntry({
-      visitEntryId: aliceEntry, // Alice's entry
-      note: "Bob trying to edit",
-      user: userBob, // Bob is not the owner
-    });
-    assertExists(
-      (resultEditUnauthorized as { error: string }).error,
-      "editEntry should fail for unauthorized user",
-    );
-    assertEquals(
-      (resultEditUnauthorized as { error: string }).error,
-      "Unauthorized: User is not the owner of this visit.",
-      "Error message for unauthorized user (edit)",
-    );
-    console.log(
-      `Failed as expected: ${
-        (resultEditUnauthorized as { error: string }).error
-      }`,
-    );
+    // Edit tests removed
 
     // Test: Non-existent entry for remove
     console.log("Attempting to remove a non-existent entry.");

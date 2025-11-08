@@ -2,7 +2,7 @@ import { assertEquals, assertExists, assertNotEquals } from "jsr:@std/assert";
 import { testDb } from "@utils/database.ts";
 import UserAuthenticationConcept from "./UserAuthenticationConcept.ts";
 import { ID } from "@utils/types.ts";
-import { MongoClient } from "npm:mongodb"; // Import MongoClient for closing
+// (MongoClient import removed; not directly used here)
 
 // --- Test for Operational Principle ---
 Deno.test("UserAuthenticationConcept: Operational Principle (Register and Authenticate)", async () => {
@@ -24,6 +24,7 @@ Deno.test("UserAuthenticationConcept: Operational Principle (Register and Authen
       (registerResult as { user: ID }).user,
       "Registration should return a user ID",
     );
+    // No session returned directly; session is created via Requesting sync orchestration.
     const registeredUserId = (registerResult as { user: ID }).user;
     console.log(`User registered with ID: ${registeredUserId}`);
 
@@ -37,6 +38,7 @@ Deno.test("UserAuthenticationConcept: Operational Principle (Register and Authen
       (authResult as { user: ID }).user,
       "Successful authentication should return a user ID",
     );
+    // No session returned directly; session is created via Requesting sync orchestration.
     assertEquals(
       (authResult as { user: ID }).user,
       registeredUserId,
@@ -147,6 +149,7 @@ Deno.test("UserAuthenticationConcept: Handle multiple successful registrations a
       (resA as { user: ID }).user,
       "Alice registration should succeed",
     );
+    // No session returned directly.
     const userA_id = (resA as { user: ID }).user;
 
     console.log(
@@ -161,6 +164,7 @@ Deno.test("UserAuthenticationConcept: Handle multiple successful registrations a
       (resB as { user: ID }).user,
       "Bob registration should succeed",
     );
+    // No session returned directly.
     const userB_id = (resB as { user: ID }).user;
 
     assertNotEquals(
@@ -182,6 +186,7 @@ Deno.test("UserAuthenticationConcept: Handle multiple successful registrations a
       userA_id,
       "Alice authentication should succeed and return Alice's ID",
     );
+    // No session returned directly.
 
     console.log(
       `Action: authenticate({ username: "${userB_name}", password: "..." })`,
@@ -196,6 +201,7 @@ Deno.test("UserAuthenticationConcept: Handle multiple successful registrations a
       userB_id,
       "Bob authentication should succeed and return Bob's ID",
     );
+    // No session returned directly.
   } finally {
     await client.close();
   }
@@ -411,6 +417,7 @@ Deno.test("UserAuthenticationConcept: Usernames cannot contain leading/trailing 
       (validReg as { user: ID }).user,
       "Valid username registration should succeed",
     );
+    // No session returned directly.
     const validUserId = (validReg as { user: ID }).user;
 
     // Attempt to authenticate with leading/trailing spaces against the valid user
@@ -445,6 +452,7 @@ Deno.test("UserAuthenticationConcept: Usernames cannot contain leading/trailing 
       (authTrimmed as { user: ID }).user,
       "Authentication with trimmed username should succeed",
     );
+    // No session returned directly.
     assertEquals(
       (authTrimmed as { user: ID }).user,
       validUserId,

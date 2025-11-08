@@ -36,7 +36,7 @@ interface Review {
   user: User;
   item: ItemId;
   stars: STARS;
-  note?: string;
+  note: string; // now required
   updatedAt: Date;
 }
 
@@ -62,7 +62,7 @@ interface Museum {
 
 /**
  * @concept Reviewing [User, Item]
- * @purpose record normalized per-item opinion (1–5 stars) with optional note
+ * @purpose record normalized per-item opinion (1–5 stars) with a required note
  */
 export default class ReviewingConcept {
   private reviews: Collection<Review>;
@@ -81,9 +81,8 @@ export default class ReviewingConcept {
     this.validItemIds = ids;
   }
 
-  async init(): Promise<void> {
+  init(): void {
     if (this.initialized) return;
-
     this.initialized = true;
   }
 
@@ -111,7 +110,7 @@ export default class ReviewingConcept {
    * @param {User} params.user - The ID of the user.
    * @param {ItemId} params.item - The ID of the item (museum or exhibit) being reviewed.
    * @param {STARS} params.stars - The star rating (1-5).
-   * @param {string} [params.note] - An optional note for the review.
+   * @param {string} params.note - A required note (non-empty) justifying the rating.
    * @returns `Empty` on success, or `{ error: string }` if validation fails or an unexpected error occurs.
    */
   async upsertReview(
@@ -119,7 +118,7 @@ export default class ReviewingConcept {
       user: User;
       item: ItemId;
       stars: STARS;
-      note?: string;
+      note: string; // required
     },
   ): Promise<Empty | { error: string }> {
     // Validate the item ID against the loaded museum data.
@@ -137,14 +136,18 @@ export default class ReviewingConcept {
       };
     }
 
+    if (typeof note !== "string" || note.trim() === "") {
+      return { error: "Note is required and cannot be blank." };
+    }
     const reviewId = getReviewId(user, item);
+    const sanitizedNote = note.trim(); // guaranteed non-empty
     const now = new Date();
 
     try {
       // Use `updateOne` with `upsert: true` to create or update the review atomically.
       await this.reviews.updateOne(
         { _id: reviewId }, // Query for the specific review
-        { $set: { user, item, stars, note, updatedAt: now } }, // Data to set/update
+        { $set: { user, item, stars, note: sanitizedNote, updatedAt: now } }, // Data to set/update
         { upsert: true }, // Create if not found
       );
       return {}; // Success

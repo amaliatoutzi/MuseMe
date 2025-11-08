@@ -1,7 +1,7 @@
 // file: src/concepts/UserAuthenticationConcept.ts
 
 import { Collection, Db } from "npm:mongodb";
-import { Empty, ID } from "@utils/types.ts";
+import { ID } from "@utils/types.ts";
 import { freshID } from "@utils/database.ts";
 import * as crypto from "node:crypto";
 import { Buffer } from "node:buffer";
@@ -31,7 +31,7 @@ function hasEdgeSpaces(s: string) {
  * @param password The plaintext password to hash.
  * @returns A promise that resolves to the combined salt and hash string.
  */
-async function hashPassword(password: string): Promise<string> {
+function hashPassword(password: string): Promise<string> {
   return new Promise((resolve, reject) => {
     // Generate a random salt
     crypto.randomBytes(SALT_LENGTH, (err, salt) => {
@@ -62,7 +62,7 @@ async function hashPassword(password: string): Promise<string> {
  * @param storedHash The stored hash (containing salt and derived key).
  * @returns A promise that resolves to true if the password matches, false otherwise.
  */
-async function verifyPassword(
+function verifyPassword(
   password: string,
   storedHash: string,
 ): Promise<boolean> {
@@ -162,7 +162,7 @@ export default class UserAuthenticationConcept {
         createdAt: now,
         updatedAt: now,
       });
-      return { user: ownerId }; // Return the newly created User ID
+  return { user: ownerId };
     } catch (e) {
       // Catch potential database errors, e.g., if a race condition allows two
       // simultaneous registrations with the same username before the unique index
@@ -206,6 +206,6 @@ export default class UserAuthenticationConcept {
     }
 
     // If both checks pass, authentication is successful
-    return { user: userCredentials._id }; // Return the authenticated User ID
+    return { user: userCredentials._id };
   }
 }

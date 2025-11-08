@@ -31,6 +31,7 @@ export const inclusions: Record<string, string> = {
   "/api/LikertSurvey/_getRespondentAnswers": "answers are visible",
   "/api/LikertSurvey/submitResponse": "allow anyone to submit response",
   "/api/LikertSurvey/updateResponse": "allow anyone to update their response",
+  // Removed: authenticate/register are excluded to enable session orchestration via syncs
 };
 
 /**
@@ -47,4 +48,58 @@ export const exclusions: Array<string> = [
   // Feel free to delete these example exclusions
   "/api/LikertSurvey/createSurvey",
   "/api/LikertSurvey/addQuestion",
+  "/api/Following/_areFriends",
+  "/api/Following/_getFollowees",
+  "/api/Following/_getFollowers",
+  "/api/Following/_getFollows",
+  "/api/Following/_getUserIdByUsername",
+  "/api/Following/_getUsernameByUserId",
+  "/api/Following/follow",
+  "/api/Following/unfollow",
+  "/api/LikertSurvey/_getRespondentAnswers",
+  "/api/LikertSurvey/_getSurveyQuestions",
+  "/api/LikertSurvey/_getSurveyResponses",
+  "/api/LikertSurvey/submitResponse",
+  "/api/LikertSurvey/updateResponse",
+  "/api/Profile/_getProfile",
+  "/api/Profile/addName",
+  "/api/Profile/addProfilePicture",
+  "/api/Profile/editProfilePicture",
+  "/api/Profile/isBlank",
+  "/api/Profile/removeProfilePicture",
+  "/api/Reviewing/_getReview",
+  "/api/Reviewing/_getReviewsByItem",
+  "/api/Reviewing/_getReviewsByUser",
+  "/api/Reviewing/_isValidItem",
+  "/api/Reviewing/clearReview",
+  "/api/Reviewing/init",
+  // Reviewing.upsertReview excluded to enforce required note & auth via syncs
+  "/api/Reviewing/upsertReview",
+  "/api/Saving/_listSaved",
+  "/api/Saving/saveItem",
+  "/api/Saving/unsaveItem",
+  "/api/Similarity/neighbors",
+  "/api/Similarity/rebuildSimilarity",
+  "/api/UserPreferences/_getPreferencesForUser",
+  "/api/UserPreferences/_getUsersByPreferenceTag",
+  "/api/UserPreferences/addPreference",
+  "/api/UserPreferences/removePreference",
+  // Sessioning: handle via Requesting + syncs for auth/response orchestration
+  "/api/Sessioning/create",
+  "/api/Sessioning/delete",
+  "/api/Sessioning/_getUser",
+  // Exclude to orchestrate sessions in syncs
+  "/api/UserAuthentication/authenticate",
+  "/api/UserAuthentication/register",
+  // (Removed login/registerAndLogin wrappers; concept handles sessions directly)
+  "/api/Visit/_getEntriesByVisit",
+  "/api/Visit/_getEntry",
+  "/api/Visit/_getVisit",
+  "/api/Visit/_getVisitsByUser",
+  // Visit.addEntry excluded to enforce required note, photos, rating via syncs
+  "/api/Visit/addEntry",
+  "/api/Visit/createVisit",
+  "/api/Visit/editEntry",
+  "/api/Visit/removeEntry",
+  // Removed enrichment endpoints (no longer supported; strict single addEntry)
 ];
